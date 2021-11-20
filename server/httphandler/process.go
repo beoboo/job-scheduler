@@ -1,4 +1,4 @@
-package http_handler
+package httphandler
 
 import (
 	"encoding/json"
@@ -24,21 +24,9 @@ func NewHttpProcessHandler() *HttpProcessHandler {
 
 func (h *HttpProcessHandler) Start(rw http.ResponseWriter, req *http.Request) {
 	fmt.Println("startHandler start")
-	//for name, headers := range req.Header {
-	//	for _, h := range headers {
-	//		_, err := fmt.Fprintf(rw, "%v: %v\n", name, h)
-	//		if err != nil {
-	//			fmt.Println("Cannot write response")
-	//			return
-	//		}
-	//	}
-	//}
-	//
 
-	var data protocol.StartData
-	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&data)
-	//err = json.Unmarshal(body, &data)
+	var data protocol.StartRequestData
+	err := json.NewDecoder(req.Body).Decode(&data)
 
 	if err != nil {
 		log.Printf("Invalid JSON data: %s", err)
@@ -46,18 +34,29 @@ func (h *HttpProcessHandler) Start(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(data)
+	pid, status := h.runner.Start(data.Executable, data.Args)
 
-	//h.runner.Start("./test.sh", "5 .5")
-	h.runner.Start(data.Command, data.Args)
+	sendResponse(rw, protocol.StartResponseData{
+		Pid:    pid,
+		Status: status,
+	})
 
 	fmt.Printf("startHandler end (%d)\n", len(h.runner.Processes))
+}
+
+func sendResponse(rw http.ResponseWriter, data interface{}) {
+	err := json.NewEncoder(rw).Encode(data)
+	if err != nil {
+		log.Printf("Cannot build JSON response: %s", err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *HttpProcessHandler) Stop(rw http.ResponseWriter, req *http.Request) {
 	fmt.Println("stopHandler start")
 
-	var data protocol.StopData
+	var data protocol.StopRequestData
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&data)
 
@@ -67,10 +66,17 @@ func (h *HttpProcessHandler) Stop(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(data)
+	status, err := h.runner.Stop(data.Pid)
+	if err != nil {
+		log.Println(err)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	//h.runner.Start("./test.sh", "5 .5")
-	h.runner.Stop(data.Pid)
+	sendResponse(rw, protocol.StopResponseData{
+		Pid:    data.Pid,
+		Status: status,
+	})
 
 	fmt.Printf("stopHandler end (%d)\n", len(h.runner.Processes))
 }

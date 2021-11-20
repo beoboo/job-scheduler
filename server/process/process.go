@@ -2,7 +2,7 @@ package process
 
 type Process interface {
 	Start() int
-	Stop()
+	Stop() error
 	Wait()
 	Output() string
 	Error() string

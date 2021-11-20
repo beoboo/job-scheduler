@@ -86,10 +86,10 @@ func buildClient(mtls bool) (*http.Client, error) {
 
 }
 
-func (c *HttpClient) Start(command string, args string) (string, error) {
-	data := protocol.StartData{
-		Command: command,
-		Args:    args,
+func (c *HttpClient) Start(executable string, args string) (string, error) {
+	data := protocol.StartRequestData{
+		Executable: executable,
+		Args:       args,
 	}
 
 	content, err := json.Marshal(data)
@@ -101,7 +101,7 @@ func (c *HttpClient) Start(command string, args string) (string, error) {
 }
 
 func (c *HttpClient) Stop(pid int) (string, error) {
-	data := protocol.StopData{
+	data := protocol.StopRequestData{
 		Pid: pid,
 	}
 

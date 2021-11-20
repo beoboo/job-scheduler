@@ -4,16 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"strings"
 )
 
 type ProcessImpl struct {
-	command *exec.Cmd
-	Pid     int
-	streams map[string]string
-	done    chan bool
+	executable *exec.Cmd
+	Pid        int
+	streams    map[string]string
+	done       chan bool
 }
 
 func New(cmd string, args ...string) *ProcessImpl {
@@ -21,9 +20,9 @@ func New(cmd string, args ...string) *ProcessImpl {
 	command := exec.Command(cmd, args...)
 
 	p := &ProcessImpl{
-		command: command,
-		streams: make(map[string]string),
-		done:    make(chan bool),
+		executable: command,
+		streams:    make(map[string]string),
+		done:       make(chan bool),
 	}
 
 	return p
@@ -34,7 +33,12 @@ func (p *ProcessImpl) Start() int {
 
 	fmt.Println("Running process")
 
-	go p.run(pid)
+	go func() {
+		err := p.run(pid)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	p.Pid = <-pid
 
@@ -43,13 +47,15 @@ func (p *ProcessImpl) Start() int {
 	return p.Pid
 }
 
-func (p *ProcessImpl) Stop() {
+func (p *ProcessImpl) Stop() error {
 	fmt.Println("Killing the process")
-	err := p.command.Process.Kill()
+	err := p.executable.Process.Kill()
 
 	if err != nil {
-		log.Fatalf("Cannot kill process (%+v)\n", err)
+		return fmt.Errorf("Cannot kill process (%+v)\n", err)
 	}
+
+	return nil
 }
 
 func (p *ProcessImpl) Wait() {
@@ -81,30 +87,30 @@ func (p *ProcessImpl) pipe(stream string, pipe io.ReadCloser) {
 	}
 }
 
-func (p *ProcessImpl) run(pid chan int) {
-	stdout, _ := p.command.StdoutPipe()
-	stderr, _ := p.command.StderrPipe()
+func (p *ProcessImpl) run(pid chan int) error {
+	stdout, _ := p.executable.StdoutPipe()
+	stderr, _ := p.executable.StderrPipe()
 
-	err := p.command.Start()
+	err := p.executable.Start()
 	if err != nil {
-		log.Fatalf("Cannot start process (%+v)\n", err)
-		return
+		return fmt.Errorf("Cannot start process (%+v)\n", err)
 	}
-	pid <- p.command.Process.Pid
+	pid <- p.executable.Process.Pid
 
 	p.pipe("output", stdout)
 	p.pipe("error", stderr)
 
 	if err != nil {
-		log.Fatalf("Cannot start process (%+v)\n", err)
-		return
+		return fmt.Errorf("Cannot start process (%+v)\n", err)
 	}
 
-	err = p.command.Wait()
+	err = p.executable.Wait()
+
 	if err != nil {
-		log.Fatalf("Cannot wait for process (%+v)\n", err)
-		return
+		return fmt.Errorf("Cannot wait for process %d (%+v)\n", p.Pid, err)
 	}
 
 	p.done <- true
+
+	return nil
 }

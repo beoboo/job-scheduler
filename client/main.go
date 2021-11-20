@@ -23,38 +23,37 @@ func main() {
 
 	flag.Parse()
 	remaining := flag.Args()
-	//fmt.Println(remaining)
-	command := remaining[0]
+	executable := remaining[0]
 	args := remaining[1:]
 
 	client := net.NewHttpClient(*host, *port, *mtls, *basicAuth)
 	ctrl := controller.New(client)
 
-	switch command {
+	switch executable {
 	case "start":
 		start(ctrl, args)
 	case "stop":
 		stop(ctrl, args)
 	default:
-		log.Fatalf("Unknown \"%s\" command\n", command)
+		log.Fatalf("Unknown \"%s\" executable\n", executable)
 	}
 }
 
 func start(ctrl *controller.Controller, args []string) {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: start command [args]")
+		log.Fatalf("Usage: start executable [args]")
 	}
 
-	command := args[0]
+	executable := args[0]
 	params := strings.Join(args[1:], " ")
 
 	if len(params) > 0 {
-		fmt.Printf("Starting \"%s %s\"\n", command, params)
+		fmt.Printf("Starting \"%s %s\"\n", executable, params)
 	} else {
-		fmt.Printf("Starting \"%s\"\n", command)
+		fmt.Printf("Starting \"%s\"\n", executable)
 	}
 
-	output, err := ctrl.Start(command, params)
+	output, err := ctrl.Start(executable, params)
 	if err != nil {
 		log.Fatal(err)
 	}

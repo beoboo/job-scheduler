@@ -11,7 +11,7 @@ package playground
 //)
 //
 //func main() {
-//	cmd := exec.Command("ping", "google.com")
+//	cmd := exec.Executable("ping", "google.com")
 //
 //	var out bytes.Buffer
 //	multi := io.MultiWriter(os.Stdout, &out)

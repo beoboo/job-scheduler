@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"github.com/beoboo/job-worker-service/server/http_handler"
+	"github.com/beoboo/job-worker-service/server/httphandler"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,13 +13,13 @@ import (
 
 func main() {
 	// Set up a /hello resource handler
-	handler := http_handler.NewHttpProcessHandler()
+	handler := httphandler.NewHttpProcessHandler()
 
 	//http.Handle("/start", handler)
 	http.HandleFunc("/start", handler.Start)
 	http.HandleFunc("/stop", handler.Stop)
-	//http.Handle("/stop", http_handler.NewHttpProcessHandler())
-	//http.Handle("/start", http_handler.NewHttpBasicHandler(http_handler.NewHttpProcessHandler()))
+	//http.Handle("/stop", httphandler.NewHttpProcessHandler())
+	//http.Handle("/start", httphandler.NewHttpBasicHandler(httphandler.NewHttpProcessHandler()))
 
 	mtls := flag.Bool("mtls", false, "Enable mTLS")
 	port := flag.Int("port", -1, "Server port")

@@ -9,7 +9,7 @@ package playground
 //
 //func main() {
 //	args := "5 1"
-//	cmd := exec.Command("./test.sh", strings.Split(args, " ")...)
+//	cmd := exec.Executable("./test.sh", strings.Split(args, " ")...)
 //
 //	stdout, _ := cmd.StdoutPipe()
 //	cmd.Start()

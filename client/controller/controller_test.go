@@ -16,8 +16,8 @@ func NewDummyClient() *DummyClient {
 	}
 }
 
-func (c *DummyClient) Start(command string, args string) (string, error) {
-	c.executed["start"] = []string{command, args}
+func (c *DummyClient) Start(executable string, args string) (string, error) {
+	c.executed["start"] = []string{executable, args}
 
 	return "ok", nil
 }
@@ -45,11 +45,11 @@ func equal(a, b []string) bool {
 func TestStart(t *testing.T) {
 	controller := New(dummyClient)
 
-	controller.Start("echo", "hello")
+	_, _ = controller.Start("echo", "hello")
 
 	args, ok := dummyClient.executed["start"]
 	if !ok {
-		t.Fatalf("Client has not executed the %s command", "start")
+		t.Fatalf("Client has not executed the \"%s\" executable", "start")
 	}
 	expected := []string{"echo", "hello"}
 
@@ -61,11 +61,11 @@ func TestStart(t *testing.T) {
 func TestStop(t *testing.T) {
 	controller := New(dummyClient)
 
-	controller.Stop(1)
+	_, _ = controller.Stop(1)
 
 	args, ok := dummyClient.executed["stop"]
 	if !ok {
-		t.Fatalf("Client has not executed the %s command", "stop")
+		t.Fatalf("Client has not executed the \"%s\" executable", "stop")
 	}
 	expected := []string{"1"}
 

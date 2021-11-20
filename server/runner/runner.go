@@ -18,9 +18,9 @@ func New(factory process.ProcessFactory) *Runner {
 	}
 }
 
-func (r *Runner) Start(command string, args string) int {
-	fmt.Printf("Starting command: \"%s %s\"\n", command, args)
-	proc := r.factory.Create(command, strings.Split(args, " ")...)
+func (r *Runner) Start(executable string, args string) (int, string) {
+	fmt.Printf("Starting executable: \"%s %s\"\n", executable, args)
+	proc := r.factory.Create(executable, strings.Split(args, " ")...)
 
 	pid := proc.Start()
 	fmt.Printf("Process PID: %d\n", pid)
@@ -29,37 +29,29 @@ func (r *Runner) Start(command string, args string) int {
 	fmt.Printf("Status: %s\n", proc.Status())
 
 	r.Processes[pid] = proc
-	return pid
+	return pid, proc.Status()
+}
+
+func (r *Runner) Stop(pid int) (string, error) {
+	fmt.Printf("Stopping process %d: \n", pid)
+
+	proc, ok := r.Processes[pid]
+
+	if !ok {
+		return "", fmt.Errorf("Cannot find process: %d\n", pid)
+	}
+
+	err := proc.Stop()
+	if err != nil {
+		return "", fmt.Errorf("Cannot stop process: %d\n", pid)
+	}
+
+	delete(r.Processes, pid)
+
+	return proc.Status(), nil
 }
 
 func (r *Runner) Status(pid int) {
-	fmt.Printf("Stopping process %d: \n", pid)
-
-	proc, ok := r.Processes[pid]
-
-	if !ok {
-		_ = fmt.Errorf("Cannot find process: %d\n", pid)
-		return
-	}
-
-	proc.Stop()
-
-	delete(r.Processes, pid)
-}
-
-func (r *Runner) Stop(pid int) {
-	fmt.Printf("Stopping process %d: \n", pid)
-
-	proc, ok := r.Processes[pid]
-
-	if !ok {
-		_ = fmt.Errorf("Cannot find process: %d\n", pid)
-		return
-	}
-
-	proc.Stop()
-
-	delete(r.Processes, pid)
 }
 
 func (r *Runner) Output(pid int) string {

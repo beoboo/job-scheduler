@@ -6,8 +6,8 @@ type Controller struct {
 	client net.Client
 }
 
-func (c *Controller) Start(command string, args string) (string, error) {
-	return c.client.Start(command, args)
+func (c *Controller) Start(executable string, args string) (string, error) {
+	return c.client.Start(executable, args)
 }
 
 func (c *Controller) Stop(pid int) (string, error) {
