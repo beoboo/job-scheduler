@@ -2,18 +2,18 @@ package runner
 
 import (
 	"fmt"
-	"job-worker-service/process"
+	"github.com/beoboo/job-worker-service/server/process"
 	"strings"
 )
 
 type Runner struct {
-	factory process.ProcessFactory
+	factory   process.ProcessFactory
 	Processes map[int]process.Process
 }
 
 func New(factory process.ProcessFactory) *Runner {
 	return &Runner{
-		factory: factory,
+		factory:   factory,
 		Processes: make(map[int]process.Process),
 	}
 }
@@ -25,8 +25,8 @@ func (r *Runner) Start(command string, args string) int {
 	pid := proc.Start()
 	fmt.Printf("Process PID: %d\n", pid)
 	fmt.Printf("Output: %s", proc.Output())
-	fmt.Printf("Error: %s", proc.Error())
-	fmt.Printf("Status: %s", proc.Status())
+	fmt.Printf("Error: %s\n", proc.Error())
+	fmt.Printf("Status: %s\n", proc.Status())
 
 	r.Processes[pid] = proc
 	return pid

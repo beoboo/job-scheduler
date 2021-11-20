@@ -1,4 +1,4 @@
-module github.com/beoboo/job-worker-service/client
+module github.com/beoboo/job-worker-service/server
 
 go 1.16
 

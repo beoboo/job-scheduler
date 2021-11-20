@@ -1,3 +1,3 @@
-module job-worker-service
+module github.com/beoboo/job-worker-service
 
 go 1.16

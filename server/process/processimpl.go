@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"strings"
 )
@@ -11,8 +12,8 @@ import (
 type ProcessImpl struct {
 	command *exec.Cmd
 	Pid     int
-	streams  map[string]string
-	done chan bool
+	streams map[string]string
+	done    chan bool
 }
 
 func New(cmd string, args ...string) *ProcessImpl {
@@ -22,7 +23,7 @@ func New(cmd string, args ...string) *ProcessImpl {
 	p := &ProcessImpl{
 		command: command,
 		streams: make(map[string]string),
-		done: make(chan bool),
+		done:    make(chan bool),
 	}
 
 	return p
@@ -47,7 +48,7 @@ func (p *ProcessImpl) Stop() {
 	err := p.command.Process.Kill()
 
 	if err != nil {
-		_ = fmt.Errorf("Cannot kill process (%+v)\n", err)
+		log.Fatalf("Cannot kill process (%+v)\n", err)
 	}
 }
 
@@ -85,19 +86,23 @@ func (p *ProcessImpl) run(pid chan int) {
 	stderr, _ := p.command.StderrPipe()
 
 	err := p.command.Start()
+	if err != nil {
+		log.Fatalf("Cannot start process (%+v)\n", err)
+		return
+	}
 	pid <- p.command.Process.Pid
 
 	p.pipe("output", stdout)
 	p.pipe("error", stderr)
 
 	if err != nil {
-		_ = fmt.Errorf("Cannot start process (%+v)\n", err)
+		log.Fatalf("Cannot start process (%+v)\n", err)
 		return
 	}
 
 	err = p.command.Wait()
 	if err != nil {
-		_ = fmt.Errorf("Cannot wait for process (%+v)\n", err)
+		log.Fatalf("Cannot wait for process (%+v)\n", err)
 		return
 	}
 

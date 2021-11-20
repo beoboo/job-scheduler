@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"job-worker-service/process"
+	"github.com/beoboo/job-worker-service/server/process"
 	"strings"
 	"testing"
 )
@@ -13,7 +13,7 @@ type DummyProcess struct {
 }
 
 func (p *DummyProcess) log(msg string) {
-	p.logs = append(p.logs, "start")
+	p.logs = append(p.logs, msg)
 }
 
 func (p *DummyProcess) Start() int {
