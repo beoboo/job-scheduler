@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -22,20 +21,20 @@ func (c *DummyClient) Start(executable string, args string) (string, error) {
 	return "ok", nil
 }
 
-func (c *DummyClient) Stop(pid int) (string, error) {
-	c.executed["stop"] = []string{strconv.Itoa(pid)}
+func (c *DummyClient) Stop(id string) (string, error) {
+	c.executed["stop"] = []string{id}
 
 	return "ok", nil
 }
 
-func (c *DummyClient) Status(pid int) (string, error) {
-	c.executed["status"] = []string{strconv.Itoa(pid)}
+func (c *DummyClient) Status(id string) (string, error) {
+	c.executed["status"] = []string{id}
 
 	return "ok", nil
 }
 
-func (c *DummyClient) Output(pid int) (string, error) {
-	c.executed["output"] = []string{strconv.Itoa(pid)}
+func (c *DummyClient) Output(id string) (string, error) {
+	c.executed["output"] = []string{id}
 
 	return "ok", nil
 }
@@ -73,13 +72,13 @@ func TestStart(t *testing.T) {
 func TestStop(t *testing.T) {
 	controller := New(dummyClient)
 
-	_, _ = controller.Stop(1)
+	_, _ = controller.Stop("abcdef")
 
 	args, ok := dummyClient.executed["stop"]
 	if !ok {
 		t.Fatalf("Controller has not stopped the %d pid", 1)
 	}
-	expected := []string{"1"}
+	expected := []string{"abcdef"}
 
 	if !equal(args, expected) {
 		t.Fatalf("Expected \"%s\", got \"%s\"", strings.Join(args, " "), strings.Join(expected, " "))
@@ -89,13 +88,13 @@ func TestStop(t *testing.T) {
 func TestStatus(t *testing.T) {
 	controller := New(dummyClient)
 
-	_, _ = controller.Status(1)
+	_, _ = controller.Status("abcdef")
 
 	args, ok := dummyClient.executed["status"]
 	if !ok {
 		t.Fatalf("Controller has not checked status for the %d pid", 1)
 	}
-	expected := []string{"1"}
+	expected := []string{"abcdef"}
 
 	if !equal(args, expected) {
 		t.Fatalf("Expected \"%s\", got \"%s\"", strings.Join(args, " "), strings.Join(expected, " "))
@@ -105,14 +104,14 @@ func TestStatus(t *testing.T) {
 func TestOutput(t *testing.T) {
 	controller := New(dummyClient)
 
-	_, _ = controller.Output(1)
+	_, _ = controller.Output("abcdef")
 
 	args, ok := dummyClient.executed["output"]
 	if !ok {
 		t.Fatalf("Controller has not returned any output for the %d pid", 1)
 	}
 
-	expected := []string{"1"}
+	expected := []string{"abcdef"}
 
 	if !equal(args, expected) {
 		t.Fatalf("Expected \"%s\", got \"%s\"", strings.Join(args, " "), strings.Join(expected, " "))

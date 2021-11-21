@@ -3,6 +3,7 @@ package scheduler
 import (
 	"fmt"
 	"github.com/beoboo/job-worker-service/protocol"
+	"github.com/beoboo/job-worker-service/server/errors"
 	"github.com/beoboo/job-worker-service/server/process"
 	"strings"
 )
@@ -25,8 +26,8 @@ func (r *Scheduler) Start(executable string, args string) (string, string) {
 
 	id := proc.Start()
 	fmt.Printf("Process PID: %s\n", id)
-	fmt.Printf("Output: %s\n", proc.Output())
-	fmt.Printf("Error: %s\n", proc.Error())
+	//fmt.Printf("Output: %s\n", proc.Output())
+	//fmt.Printf("Error: %s\n", proc.Error())
 	fmt.Printf("Status: %s\n", proc.Status())
 
 	r.Processes[proc.Id()] = proc
@@ -39,12 +40,12 @@ func (r *Scheduler) Stop(id string) (string, error) {
 	proc, ok := r.Processes[id]
 
 	if !ok {
-		return "", fmt.Errorf("Cannot find process: %s\n", id)
+		return "", &errors.NotFoundError{Id: id}
 	}
 
 	err := proc.Stop()
 	if err != nil {
-		return "", fmt.Errorf("Cannot stop process: %s\n", id)
+		return "", fmt.Errorf("cannot stop process: %s", id)
 	}
 
 	delete(r.Processes, id)
@@ -56,7 +57,7 @@ func (r *Scheduler) Status(id string) (string, error) {
 	proc, ok := r.Processes[id]
 
 	if !ok {
-		return "", fmt.Errorf("Cannot find process: %s\n", id)
+		return "", fmt.Errorf("cannot find process: %s", id)
 	}
 
 	return proc.Status(), nil
@@ -68,7 +69,7 @@ func (r *Scheduler) Output(id string) ([]protocol.OutputStream, error) {
 	proc, ok := r.Processes[id]
 
 	if !ok {
-		return nil, fmt.Errorf("Cannot find process: %ss\n", id)
+		return nil, &errors.NotFoundError{Id: id}
 	}
 
 	output := convertStream(proc.Output())

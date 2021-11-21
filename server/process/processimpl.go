@@ -18,10 +18,11 @@ type ProcessImpl struct {
 }
 
 func New(executable string, args ...string) *ProcessImpl {
-	fmt.Printf("New process for %s %s\n", executable, strings.Join(args, " "))
+	fmt.Printf("New process for \"%s %s\"\n", executable, strings.Join(args, " "))
 	cmd := exec.Command(executable, args...)
+	fmt.Printf("%+v", cmd)
 
-	// This could be a UUID
+	// TODO: This could be a UUID or some other generated value
 	now := time.Now()
 
 	p := &ProcessImpl{
@@ -42,12 +43,16 @@ func (p *ProcessImpl) Id() string {
 func (p *ProcessImpl) Start() string {
 	fmt.Println("Running process")
 
+	started := make(chan bool, 1)
+
 	go func() {
-		err := p.run()
+		err := p.run(started)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}()
+
+	<-started
 
 	return p.id
 }
@@ -57,7 +62,7 @@ func (p *ProcessImpl) Stop() error {
 	err := p.cmd.Process.Kill()
 
 	if err != nil {
-		return fmt.Errorf("Cannot kill process %d: (%s)\n", p.pid(), err)
+		return fmt.Errorf("cannot kill process %d: (%s)", p.pid(), err)
 	}
 
 	p.status = "killed"
@@ -80,19 +85,21 @@ func (p *ProcessImpl) Status() string {
 	return p.status
 }
 
-func (p *ProcessImpl) run() error {
+func (p *ProcessImpl) run(started chan bool) error {
 	stdout, _ := p.cmd.StdoutPipe()
 	stderr, _ := p.cmd.StderrPipe()
 
-	err := p.cmd.Start() // TODO: Is this likely to miss initial output from the process?
-	p.pipe("output", stdout)
-	p.pipe("error", stderr)
+	err := p.cmd.Start()
 
+	started <- true
 	p.status = "started"
 	pid := p.cmd.Process.Pid
 
+	p.pipe("output", stdout)
+	p.pipe("error", stderr)
+
 	if err != nil {
-		return fmt.Errorf("Cannot start process: (%s)\n", err)
+		return fmt.Errorf("cannot start process: (%s)", err)
 	}
 
 	fmt.Printf("Process PID: %d\n", pid)
@@ -100,7 +107,7 @@ func (p *ProcessImpl) run() error {
 	err = p.cmd.Wait()
 
 	if err != nil {
-		return fmt.Errorf("Cannot wait for process %d: (%s)\n", pid, err)
+		return fmt.Errorf("cannot wait for process %d: (%s)", pid, err)
 	}
 
 	p.status = "exited"
@@ -118,9 +125,9 @@ func (p *ProcessImpl) pipe(stream string, pipe io.ReadCloser) {
 	for scanner.Scan() {
 		m := scanner.Text()
 		p.streams[stream] = append(p.streams[stream], OutputStream{
-			channel: stream,
-			time:    time.Now().UnixNano(),
-			text:    m,
+			Channel: stream,
+			Time:    time.Now().UnixNano(),
+			Text:    m,
 		})
 		fmt.Println(m)
 	}

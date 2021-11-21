@@ -6,8 +6,10 @@ type OutputRequestData struct {
 
 type OutputStream struct {
 	Channel string `json:"channel"`
-	Time    int    `json:"time"`
-	Text    string `json:"text"`
+
+	// TODO: This should consider the server timezone
+	Time int    `json:"time"`
+	Text string `json:"text"`
 }
 
 type OutputResponseData struct {

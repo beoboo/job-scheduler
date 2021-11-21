@@ -5,15 +5,15 @@ import (
 )
 
 type OutputStream struct {
-	channel string
-	time    int64
-	text    string
+	Channel string
+	Time    int64
+	Text    string
 }
 
 func (os *OutputStream) ToProtocol() protocol.OutputStream {
 	return protocol.OutputStream{
-		Channel: os.channel,
-		Time:    int(os.time),
-		Text:    os.text,
+		Channel: os.Channel,
+		Time:    int(os.Time),
+		Text:    os.Text,
 	}
 }

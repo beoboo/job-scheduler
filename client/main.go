@@ -71,7 +71,7 @@ func stop(ctrl *controller.Controller, args []string) {
 
 	id := os.Args[2]
 
-	fmt.Printf("Stopping job #\"%d\"\n", id)
+	fmt.Printf("Stopping job \"%s\"\n", id)
 	output, err := ctrl.Stop(id)
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +87,7 @@ func status(ctrl *controller.Controller, args []string) {
 
 	id := os.Args[2]
 
-	fmt.Printf("Checking status for the job #\"%d\"\n", id)
+	fmt.Printf("Checking status for the job \"%s\"\n", id)
 	output, err := ctrl.Status(id)
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +103,7 @@ func output(ctrl *controller.Controller, args []string) {
 
 	id := os.Args[2]
 
-	fmt.Printf("Retrieving output for the job #\"%d\"\n", id)
+	fmt.Printf("Retrieving output for the job \"%s\"\n", id)
 	output, err := ctrl.Output(id)
 	if err != nil {
 		log.Fatal(err)

@@ -8,6 +8,7 @@ import (
 	"github.com/beoboo/job-worker-service/server/scheduler"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type HttpProcessHandler struct {
@@ -27,7 +28,13 @@ func (h *HttpProcessHandler) Start(rw http.ResponseWriter, req *http.Request) {
 	err := json.NewDecoder(req.Body).Decode(&data)
 
 	if err != nil {
-		sendErrorResponse(rw, fmt.Sprintf("Invalid JSON data: %s", err), http.StatusBadRequest)
+		sendErrorResponse(rw, fmt.Errorf("Invalid JSON data: %s", err), http.StatusBadRequest)
+		return
+	}
+
+	executable := strings.TrimSpace(data.Executable)
+	if executable == "" {
+		sendErrorResponse(rw, fmt.Errorf("Invalid executable: \"%s\"", executable), http.StatusBadRequest)
 		return
 	}
 
@@ -45,13 +52,13 @@ func (h *HttpProcessHandler) Stop(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
-		sendErrorResponse(rw, fmt.Sprintf("Invalid JSON data: %s", err), http.StatusBadRequest)
+		sendErrorResponse(rw, fmt.Errorf("Invalid JSON data: %s", err), http.StatusBadRequest)
 		return
 	}
 
 	status, err := h.scheduler.Stop(data.Id)
 	if err != nil {
-		sendErrorResponse(rw, err.Error(), http.StatusBadRequest)
+		sendErrorResponse(rw, err, http.StatusBadRequest)
 		return
 	}
 
@@ -67,13 +74,13 @@ func (h *HttpProcessHandler) Status(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
-		sendErrorResponse(rw, fmt.Sprintf("Invalid JSON data: %s", err), http.StatusBadRequest)
+		sendErrorResponse(rw, fmt.Errorf("Invalid JSON data: %s", err), http.StatusBadRequest)
 		return
 	}
 
 	status, err := h.scheduler.Status(data.Id)
 	if err != nil {
-		sendErrorResponse(rw, err.Error(), http.StatusBadRequest)
+		sendErrorResponse(rw, err, http.StatusBadRequest)
 		return
 	}
 
@@ -89,13 +96,13 @@ func (h *HttpProcessHandler) Output(rw http.ResponseWriter, req *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
-		sendErrorResponse(rw, fmt.Sprintf("Invalid JSON data: %s", err), http.StatusBadRequest)
+		sendErrorResponse(rw, fmt.Errorf("Invalid JSON data: %s", err), http.StatusBadRequest)
 		return
 	}
 
 	output, err := h.scheduler.Output(data.Id)
 	if err != nil {
-		sendErrorResponse(rw, err.Error(), http.StatusBadRequest)
+		sendErrorResponse(rw, err, http.StatusBadRequest)
 		return
 	}
 
@@ -106,7 +113,7 @@ func (h *HttpProcessHandler) Output(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HttpProcessHandler) NotFound(rw http.ResponseWriter, req *http.Request) {
-	sendErrorResponse(rw, fmt.Sprintf("No \"%s\" path found", req.URL.Path), http.StatusNotFound)
+	sendErrorResponse(rw, fmt.Errorf("No \"%s\" path found", req.URL.Path), http.StatusNotFound)
 }
 
 func sendResponse(rw http.ResponseWriter, data interface{}) {
@@ -114,17 +121,22 @@ func sendResponse(rw http.ResponseWriter, data interface{}) {
 
 	err := json.NewEncoder(rw).Encode(data)
 	if err != nil {
-		sendErrorResponse(rw, fmt.Sprintf("Cannot build JSON response: %s", err), http.StatusInternalServerError)
+		sendErrorResponse(rw, fmt.Errorf("Cannot build JSON response: %s", err), http.StatusInternalServerError)
 	}
 }
 
-func sendErrorResponse(rw http.ResponseWriter, error string, code int) {
-	log.Println(error)
+func sendErrorResponse(rw http.ResponseWriter, error error, code int) {
+	log.Printf("%+v", error)
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(code)
+	switch error.(type) {
+	//case errors.NotFoundError:
+	//	rw.WriteHeader(http.StatusNotFound)
+	default:
+		rw.WriteHeader(code)
+	}
 
 	_ = json.NewEncoder(rw).Encode(protocol.ErrorResponseData{
-		Message: error,
+		Message: error.Error(),
 	})
 
 	fmt.Fprintln(rw, error)

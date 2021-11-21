@@ -1,6 +1,8 @@
 package process
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestStart(t *testing.T) {
 	p := New("echo", "hello")
@@ -21,13 +23,13 @@ func TestStart(t *testing.T) {
 	expected := "hello"
 
 	outputs := p.Output()
-	if outputs[0].text != expected {
-		t.Fatalf("Process output should be %s, got %s", expected, p.Output())
+	if outputs[0].Text != expected {
+		t.Fatalf("Process output should be %s, got %s", expected, outputs[0].Text)
 	}
 }
 
 func TestStop(t *testing.T) {
-	p := New("echo", "hello")
+	p := New("sleep", "1")
 
 	checkStatus(t, p, "idle")
 

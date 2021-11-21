@@ -12,14 +12,18 @@ type DummyProcess struct {
 	logs       []string
 }
 
-func (p *DummyProcess) log(msg string) {
-	p.logs = append(p.logs, msg)
+func (p *DummyProcess) Id() string {
+	return "123"
 }
 
-func (p *DummyProcess) Start() int {
+func (p *DummyProcess) Start() string {
 	p.log("start")
 
-	return 0
+	return p.Id()
+}
+
+func (p *DummyProcess) log(msg string) {
+	p.logs = append(p.logs, msg)
 }
 
 func (p *DummyProcess) Stop() error {
@@ -32,16 +36,18 @@ func (p *DummyProcess) Wait() {
 	p.log("wait")
 }
 
-func (p *DummyProcess) Output() string {
+func (p *DummyProcess) Output() []process.OutputStream {
 	if p.executable == "echo" {
-		return strings.Join(p.args, " ")
+		return []process.OutputStream{
+			{Text: strings.Join(p.args, " ")},
+		}
 	}
 
-	return ""
+	return nil
 }
 
-func (p *DummyProcess) Error() string {
-	return ""
+func (p *DummyProcess) Error() []process.OutputStream {
+	panic("implement me")
 }
 
 func (p *DummyProcess) Status() string {
@@ -92,8 +98,8 @@ func TestOutput(t *testing.T) {
 	pid, _ := scheduler.Start("echo", expected)
 	output, _ := scheduler.Output(pid)
 
-	if output != expected {
-		t.Fatalf("Wrong output, want %s, got %s", output, expected)
+	if output[0].Text != expected {
+		t.Fatalf("Wrong output, want %s, got %s", output[0].Text, expected)
 	}
 
 	_, _ = scheduler.Stop(pid)
