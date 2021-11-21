@@ -28,6 +28,18 @@ func (c *DummyClient) Stop(pid int) (string, error) {
 	return "ok", nil
 }
 
+func (c *DummyClient) Status(pid int) (string, error) {
+	c.executed["status"] = []string{strconv.Itoa(pid)}
+
+	return "ok", nil
+}
+
+func (c *DummyClient) Output(pid int) (string, error) {
+	c.executed["output"] = []string{strconv.Itoa(pid)}
+
+	return "ok", nil
+}
+
 var dummyClient = NewDummyClient()
 
 func equal(a, b []string) bool {
@@ -49,7 +61,7 @@ func TestStart(t *testing.T) {
 
 	args, ok := dummyClient.executed["start"]
 	if !ok {
-		t.Fatalf("Client has not executed the \"%s\" executable", "start")
+		t.Fatalf("Controller has not started the \"%s\" executable", "echo")
 	}
 	expected := []string{"echo", "hello"}
 
@@ -65,8 +77,41 @@ func TestStop(t *testing.T) {
 
 	args, ok := dummyClient.executed["stop"]
 	if !ok {
-		t.Fatalf("Client has not executed the \"%s\" executable", "stop")
+		t.Fatalf("Controller has not stopped the %d pid", 1)
 	}
+	expected := []string{"1"}
+
+	if !equal(args, expected) {
+		t.Fatalf("Expected \"%s\", got \"%s\"", strings.Join(args, " "), strings.Join(expected, " "))
+	}
+}
+
+func TestStatus(t *testing.T) {
+	controller := New(dummyClient)
+
+	_, _ = controller.Status(1)
+
+	args, ok := dummyClient.executed["status"]
+	if !ok {
+		t.Fatalf("Controller has not checked status for the %d pid", 1)
+	}
+	expected := []string{"1"}
+
+	if !equal(args, expected) {
+		t.Fatalf("Expected \"%s\", got \"%s\"", strings.Join(args, " "), strings.Join(expected, " "))
+	}
+}
+
+func TestOutput(t *testing.T) {
+	controller := New(dummyClient)
+
+	_, _ = controller.Output(1)
+
+	args, ok := dummyClient.executed["output"]
+	if !ok {
+		t.Fatalf("Controller has not returned any output for the %d pid", 1)
+	}
+
 	expected := []string{"1"}
 
 	if !equal(args, expected) {

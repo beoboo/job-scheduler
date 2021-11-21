@@ -18,8 +18,10 @@ func main() {
 	//http.Handle("/start", handler)
 	http.HandleFunc("/start", handler.Start)
 	http.HandleFunc("/stop", handler.Stop)
-	//http.Handle("/stop", httphandler.NewHttpProcessHandler())
-	//http.Handle("/start", httphandler.NewHttpBasicHandler(httphandler.NewHttpProcessHandler()))
+	http.HandleFunc("/status", handler.Status)
+	http.HandleFunc("/output", handler.Output)
+	http.HandleFunc("/", handler.NotFound)
+	//http.NotFound = handler.NotFound
 
 	mtls := flag.Bool("mtls", false, "Enable mTLS")
 	port := flag.Int("port", -1, "Server port")

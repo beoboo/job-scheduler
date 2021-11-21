@@ -6,6 +6,6 @@ type StartRequestData struct {
 }
 
 type StartResponseData struct {
-	Pid    int    `json:"pid"`
+	Id     string `json:"id"`
 	Status string `json:"status"`
 }

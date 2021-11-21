@@ -1,4 +1,4 @@
-package runner
+package scheduler
 
 import (
 	"github.com/beoboo/job-worker-service/server/process"
@@ -60,41 +60,41 @@ func (f *DummyProcessFactory) Create(executable string, args ...string) process.
 
 func TestStart(t *testing.T) {
 	factory := DummyProcessFactory{}
-	runner := New(&factory)
+	scheduler := New(&factory)
 
-	pid, _ := runner.Start("sleep", "1")
+	pid, _ := scheduler.Start("sleep", "1")
 
-	if len(runner.Processes) != 1 {
+	if len(scheduler.Processes) != 1 {
 		t.Fatalf("Process not started")
 	}
 
-	runner.Stop(pid)
+	_, _ = scheduler.Stop(pid)
 }
 
 func TestStop(t *testing.T) {
 	factory := DummyProcessFactory{}
-	runner := New(&factory)
+	scheduler := New(&factory)
 
-	pid, _ := runner.Start("sleep", "1")
-	_, _ = runner.Stop(pid)
+	pid, _ := scheduler.Start("sleep", "1")
+	_, _ = scheduler.Stop(pid)
 
-	if len(runner.Processes) != 0 {
+	if len(scheduler.Processes) != 0 {
 		t.Fatalf("Process not stopped")
 	}
 }
 
 func TestOutput(t *testing.T) {
 	factory := DummyProcessFactory{}
-	runner := New(&factory)
+	scheduler := New(&factory)
 
 	expected := "hello"
 
-	pid, _ := runner.Start("echo", expected)
-	output := runner.Output(pid)
+	pid, _ := scheduler.Start("echo", expected)
+	output, _ := scheduler.Output(pid)
 
 	if output != expected {
 		t.Fatalf("Wrong output, want %s, got %s", output, expected)
 	}
 
-	_, _ = runner.Stop(pid)
+	_, _ = scheduler.Stop(pid)
 }

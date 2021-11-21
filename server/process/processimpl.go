@@ -6,55 +6,61 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type ProcessImpl struct {
-	executable *exec.Cmd
-	Pid        int
-	streams    map[string]string
-	done       chan bool
+	id      string
+	cmd     *exec.Cmd
+	streams map[string][]OutputStream
+	done    chan bool
+	status  string
 }
 
-func New(cmd string, args ...string) *ProcessImpl {
-	fmt.Printf("NewProcessImpl for %s %s\n", cmd, strings.Join(args, " "))
-	command := exec.Command(cmd, args...)
+func New(executable string, args ...string) *ProcessImpl {
+	fmt.Printf("New process for %s %s\n", executable, strings.Join(args, " "))
+	cmd := exec.Command(executable, args...)
+
+	// This could be a UUID
+	now := time.Now()
 
 	p := &ProcessImpl{
-		executable: command,
-		streams:    make(map[string]string),
-		done:       make(chan bool),
+		cmd:     cmd,
+		id:      fmt.Sprintf("%d", now.UnixNano()),
+		streams: make(map[string][]OutputStream),
+		done:    make(chan bool),
+		status:  "idle",
 	}
 
 	return p
 }
 
-func (p *ProcessImpl) Start() int {
-	pid := make(chan int)
+func (p *ProcessImpl) Id() string {
+	return p.id
+}
 
+func (p *ProcessImpl) Start() string {
 	fmt.Println("Running process")
 
 	go func() {
-		err := p.run(pid)
+		err := p.run()
 		if err != nil {
 			fmt.Println(err)
 		}
 	}()
 
-	p.Pid = <-pid
-
-	fmt.Printf("Process PID: %d\n", p.Pid)
-
-	return p.Pid
+	return p.id
 }
 
 func (p *ProcessImpl) Stop() error {
 	fmt.Println("Killing the process")
-	err := p.executable.Process.Kill()
+	err := p.cmd.Process.Kill()
 
 	if err != nil {
-		return fmt.Errorf("Cannot kill process (%+v)\n", err)
+		return fmt.Errorf("Cannot kill process %d: (%s)\n", p.pid(), err)
 	}
 
+	p.status = "killed"
 	return nil
 }
 
@@ -62,55 +68,64 @@ func (p *ProcessImpl) Wait() {
 	<-p.done
 }
 
-func (p *ProcessImpl) Output() string {
+func (p *ProcessImpl) Output() []OutputStream {
 	return p.streams["output"]
 }
 
-func (p *ProcessImpl) Error() string {
+func (p *ProcessImpl) Error() []OutputStream {
 	return p.streams["error"]
 }
 
 func (p *ProcessImpl) Status() string {
-	return "unknown status"
+	return p.status
+}
+
+func (p *ProcessImpl) run() error {
+	stdout, _ := p.cmd.StdoutPipe()
+	stderr, _ := p.cmd.StderrPipe()
+
+	err := p.cmd.Start() // TODO: Is this likely to miss initial output from the process?
+	p.pipe("output", stdout)
+	p.pipe("error", stderr)
+
+	p.status = "started"
+	pid := p.cmd.Process.Pid
+
+	if err != nil {
+		return fmt.Errorf("Cannot start process: (%s)\n", err)
+	}
+
+	fmt.Printf("Process PID: %d\n", pid)
+
+	err = p.cmd.Wait()
+
+	if err != nil {
+		return fmt.Errorf("Cannot wait for process %d: (%s)\n", pid, err)
+	}
+
+	p.status = "exited"
+	p.done <- true
+
+	return nil
 }
 
 func (p *ProcessImpl) pipe(stream string, pipe io.ReadCloser) {
 	scanner := bufio.NewScanner(pipe)
 	scanner.Split(bufio.ScanWords)
 
-	p.streams[stream] = ""
+	p.streams[stream] = []OutputStream{}
 
 	for scanner.Scan() {
 		m := scanner.Text()
-		p.streams[stream] += m
+		p.streams[stream] = append(p.streams[stream], OutputStream{
+			channel: stream,
+			time:    time.Now().UnixNano(),
+			text:    m,
+		})
 		fmt.Println(m)
 	}
 }
 
-func (p *ProcessImpl) run(pid chan int) error {
-	stdout, _ := p.executable.StdoutPipe()
-	stderr, _ := p.executable.StderrPipe()
-
-	err := p.executable.Start()
-	if err != nil {
-		return fmt.Errorf("Cannot start process (%+v)\n", err)
-	}
-	pid <- p.executable.Process.Pid
-
-	p.pipe("output", stdout)
-	p.pipe("error", stderr)
-
-	if err != nil {
-		return fmt.Errorf("Cannot start process (%+v)\n", err)
-	}
-
-	err = p.executable.Wait()
-
-	if err != nil {
-		return fmt.Errorf("Cannot wait for process %d (%+v)\n", p.Pid, err)
-	}
-
-	p.done <- true
-
-	return nil
+func (p *ProcessImpl) pid() int {
+	return p.cmd.Process.Pid
 }

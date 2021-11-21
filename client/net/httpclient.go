@@ -100,9 +100,9 @@ func (c *HttpClient) Start(executable string, args string) (string, error) {
 	return c.post("start", content)
 }
 
-func (c *HttpClient) Stop(pid int) (string, error) {
+func (c *HttpClient) Stop(id string) (string, error) {
 	data := protocol.StopRequestData{
-		Pid: pid,
+		Id: id,
 	}
 
 	content, err := json.Marshal(data)
@@ -111,6 +111,32 @@ func (c *HttpClient) Stop(pid int) (string, error) {
 	}
 
 	return c.post("stop", content)
+}
+
+func (c *HttpClient) Status(id string) (string, error) {
+	data := protocol.StatusRequestData{
+		Id: id,
+	}
+
+	content, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return c.post("status", content)
+}
+
+func (c *HttpClient) Output(id string) (string, error) {
+	data := protocol.OutputRequestData{
+		Id: id,
+	}
+
+	content, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return c.post("output", content)
 }
 
 func (c *HttpClient) post(endpoint string, data []byte) (string, error) {
@@ -123,7 +149,6 @@ func (c *HttpClient) post(endpoint string, data []byte) (string, error) {
 		log.Fatal(err)
 	}
 
-	//defer response.Body.Close()
 	defer c.close(response)
 
 	fmt.Println("Status:", response.Status)

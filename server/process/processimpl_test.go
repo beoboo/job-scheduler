@@ -5,16 +5,46 @@ import "testing"
 func TestStart(t *testing.T) {
 	p := New("echo", "hello")
 
+	checkStatus(t, p, "idle")
+
 	p.Start()
 
-	if p.Pid == 0 {
-		t.Fatalf("Process PID should not be 0")
+	checkStatus(t, p, "started")
+
+	if p.Id() == "" {
+		t.Fatalf("Process PID should not be empty")
 	}
 
 	p.Wait()
+	checkStatus(t, p, "exited")
 
 	expected := "hello"
-	if p.Output() != expected {
+
+	outputs := p.Output()
+	if outputs[0].text != expected {
 		t.Fatalf("Process output should be %s, got %s", expected, p.Output())
+	}
+}
+
+func TestStop(t *testing.T) {
+	p := New("echo", "hello")
+
+	checkStatus(t, p, "idle")
+
+	p.Start()
+
+	checkStatus(t, p, "started")
+
+	if p.Id() == "" {
+		t.Fatalf("Process PID should not be empty")
+	}
+
+	_ = p.Stop()
+	checkStatus(t, p, "killed")
+}
+
+func checkStatus(t *testing.T, p *ProcessImpl, status string) {
+	if p.Status() != status {
+		t.Fatalf("Process status should be \"%s\", got \"%s\"", status, p.Status())
 	}
 }

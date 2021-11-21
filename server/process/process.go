@@ -1,10 +1,11 @@
 package process
 
 type Process interface {
-	Start() int
+	Id() string
+	Start() string
 	Stop() error
 	Wait()
-	Output() string
-	Error() string
+	Output() []OutputStream
+	Error() []OutputStream
 	Status() string
 }

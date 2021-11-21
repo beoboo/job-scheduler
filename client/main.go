@@ -7,7 +7,6 @@ import (
 	"github.com/beoboo/job-worker-service/client/net"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -23,25 +22,29 @@ func main() {
 
 	flag.Parse()
 	remaining := flag.Args()
-	executable := remaining[0]
+	command := remaining[0]
 	args := remaining[1:]
 
 	client := net.NewHttpClient(*host, *port, *mtls, *basicAuth)
 	ctrl := controller.New(client)
 
-	switch executable {
+	switch command {
 	case "start":
 		start(ctrl, args)
 	case "stop":
 		stop(ctrl, args)
+	case "status":
+		status(ctrl, args)
+	case "output":
+		output(ctrl, args)
 	default:
-		log.Fatalf("Unknown \"%s\" executable\n", executable)
+		log.Fatalf("Unknown \"%s\" command\n", command)
 	}
 }
 
 func start(ctrl *controller.Controller, args []string) {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: start executable [args]")
+		log.Fatalf("Usage: start EXECUTABLE [ARGS]")
 	}
 
 	executable := args[0]
@@ -63,16 +66,45 @@ func start(ctrl *controller.Controller, args []string) {
 
 func stop(ctrl *controller.Controller, args []string) {
 	if len(args) != 1 {
-		log.Fatalf("Usage: stop pid")
+		log.Fatalf("Usage: stop ID")
 	}
 
-	pid, err := strconv.Atoi(os.Args[2])
+	id := os.Args[2]
+
+	fmt.Printf("Stopping job #\"%d\"\n", id)
+	output, err := ctrl.Stop(id)
 	if err != nil {
-		log.Fatalf("Pid must be an int")
+		log.Fatal(err)
 	}
 
-	fmt.Printf("Stopping job \"%d\"\n", pid)
-	output, err := ctrl.Stop(pid)
+	fmt.Println(output)
+}
+
+func status(ctrl *controller.Controller, args []string) {
+	if len(args) != 1 {
+		log.Fatalf("Usage: status ID")
+	}
+
+	id := os.Args[2]
+
+	fmt.Printf("Checking status for the job #\"%d\"\n", id)
+	output, err := ctrl.Status(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(output)
+}
+
+func output(ctrl *controller.Controller, args []string) {
+	if len(args) != 1 {
+		log.Fatalf("Usage: output ID")
+	}
+
+	id := os.Args[2]
+
+	fmt.Printf("Retrieving output for the job #\"%d\"\n", id)
+	output, err := ctrl.Output(id)
 	if err != nil {
 		log.Fatal(err)
 	}
