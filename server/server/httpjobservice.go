@@ -1,29 +1,38 @@
-package httphandler
+package server
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/beoboo/job-worker-service/protocol"
-	"github.com/beoboo/job-worker-service/server/process"
+	"github.com/beoboo/job-worker-service/server/errors"
+	"github.com/beoboo/job-worker-service/server/job"
 	"github.com/beoboo/job-worker-service/server/scheduler"
 	"log"
 	"net/http"
 	"strings"
 )
 
-type HttpProcessHandler struct {
+type HttpJobService struct {
 	scheduler *scheduler.Scheduler
 }
 
-func NewHttpProcessHandler() *HttpProcessHandler {
-	factory := process.ProcessFactoryImpl{}
+func NewHttpJobService() *HttpJobService {
+	factory := job.JobFactoryImpl{}
 
-	return &HttpProcessHandler{
+	service := &HttpJobService{
 		scheduler: scheduler.New(&factory),
 	}
+
+	http.HandleFunc("/start", service.Start)
+	http.HandleFunc("/stop", service.Stop)
+	http.HandleFunc("/status", service.Status)
+	http.HandleFunc("/output", service.Output)
+	http.HandleFunc("/", service.NotFound)
+
+	return service
 }
 
-func (h *HttpProcessHandler) Start(rw http.ResponseWriter, req *http.Request) {
+func (h *HttpJobService) Start(rw http.ResponseWriter, req *http.Request) {
 	var data protocol.StartRequestData
 	err := json.NewDecoder(req.Body).Decode(&data)
 
@@ -46,7 +55,7 @@ func (h *HttpProcessHandler) Start(rw http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func (h *HttpProcessHandler) Stop(rw http.ResponseWriter, req *http.Request) {
+func (h *HttpJobService) Stop(rw http.ResponseWriter, req *http.Request) {
 	var data protocol.StopRequestData
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&data)
@@ -68,7 +77,7 @@ func (h *HttpProcessHandler) Stop(rw http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func (h *HttpProcessHandler) Status(rw http.ResponseWriter, req *http.Request) {
+func (h *HttpJobService) Status(rw http.ResponseWriter, req *http.Request) {
 	var data protocol.StatusRequestData
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&data)
@@ -90,7 +99,7 @@ func (h *HttpProcessHandler) Status(rw http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func (h *HttpProcessHandler) Output(rw http.ResponseWriter, req *http.Request) {
+func (h *HttpJobService) Output(rw http.ResponseWriter, req *http.Request) {
 	var data protocol.OutputRequestData
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&data)
@@ -106,13 +115,28 @@ func (h *HttpProcessHandler) Output(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	converted := convertOutput(output)
+
 	sendResponse(rw, protocol.OutputResponseData{
 		Id:     data.Id,
-		Output: output,
+		Output: converted,
 	})
 }
 
-func (h *HttpProcessHandler) NotFound(rw http.ResponseWriter, req *http.Request) {
+func convertOutput(from []job.OutputStream) []protocol.OutputStream {
+	result := make([]protocol.OutputStream, len(from))
+
+	for i, o := range from {
+		result[i] = protocol.OutputStream{
+			Channel: o.Channel,
+			Time:    int(o.Time),
+			Text:    o.Text,
+		}
+	}
+	return result
+}
+
+func (h *HttpJobService) NotFound(rw http.ResponseWriter, req *http.Request) {
 	sendErrorResponse(rw, fmt.Errorf("No \"%s\" path found", req.URL.Path), http.StatusNotFound)
 }
 
@@ -129,8 +153,8 @@ func sendErrorResponse(rw http.ResponseWriter, error error, code int) {
 	log.Printf("%+v", error)
 	rw.Header().Set("Content-Type", "application/json")
 	switch error.(type) {
-	//case errors.NotFoundError:
-	//	rw.WriteHeader(http.StatusNotFound)
+	case *errors.NotFoundError:
+		rw.WriteHeader(http.StatusNotFound)
 	default:
 		rw.WriteHeader(code)
 	}

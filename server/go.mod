@@ -6,5 +6,6 @@ replace github.com/beoboo/job-worker-service/protocol => ../protocol
 
 require (
 	github.com/beoboo/job-worker-service/protocol v0.0.0-00010101000000-000000000000
-	github.com/cucumber/godog v0.12.0 // indirect
+	golang.org/x/text v0.3.2 // indirect
+	google.golang.org/grpc v1.42.0
 )

@@ -5,73 +5,114 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"github.com/beoboo/job-worker-service/server/httphandler"
+	"github.com/beoboo/job-worker-service/protocol"
+	"github.com/beoboo/job-worker-service/server/server"
+	"google.golang.org/grpc"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 )
 
 func main() {
-	// Set up a /hello resource handler
-	handler := httphandler.NewHttpProcessHandler()
-
-	//http.Handle("/start", handler)
-	http.HandleFunc("/start", handler.Start)
-	http.HandleFunc("/stop", handler.Stop)
-	http.HandleFunc("/status", handler.Status)
-	http.HandleFunc("/output", handler.Output)
-	http.HandleFunc("/", handler.NotFound)
-	//http.NotFound = handler.NotFound
-
-	mtls := flag.Bool("mtls", false, "Enable mTLS")
+	enableMTLS := flag.Bool("mtls", false, "Enable mTLS")
+	enableGRPC := flag.Bool("grpc", false, "Enable GRPC")
+	host := flag.String("host", "localhost", "Remote host")
 	port := flag.Int("port", -1, "Server port")
 
 	flag.Parse()
 
-	addr := buildAddr(*port, *mtls)
+	addr := buildAddr(*host, *port, *enableMTLS)
 
-	if *mtls {
-		// Create a CA certificate pool and add cert.pem to it
-		caCert, err := ioutil.ReadFile("../certs/cert.pem")
-		if err != nil {
-			log.Fatal(err)
-		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-
-		// Create the TLS Config with the CA pool and enable Client certificate validation
-		tlsConfig := &tls.Config{
-			ClientCAs:  caCertPool,
-			ClientAuth: tls.RequireAndVerifyClientCert,
-		}
-
-		// Create a Server instance to listen on port 8443 with the TLS config
-		server := &http.Server{
-			Addr:      addr,
-			TLSConfig: tlsConfig,
-		}
-
-		// Listen to HTTPS connections with the server certificate and wait
-		log.Fatal(server.ListenAndServeTLS("../certs/cert.pem", "../certs/key.pem"))
-	} else {
-		server := &http.Server{
-			Addr: addr,
-		}
-
-		// Listen to HTTP connections with no certificates and wait
-		log.Printf("Listening on %s", addr)
-		log.Fatal(server.ListenAndServe())
+	if *enableGRPC {
+		log.Fatal(buildGRPCServer(addr, *enableMTLS))
+	} else if *enableMTLS {
+		log.Fatal(buildHTTPServer(addr, *enableMTLS))
 	}
 }
 
-func buildAddr(port int, mtls bool) string {
+func buildGRPCServer(addr string, enableMTLS bool) error {
+	log.Printf("Creating GRPC server on \"%s\"", addr)
+	srv := grpc.NewServer()
+
+	protocol.RegisterJobSchedulerServer(srv, server.NewGrpcJobService(enableMTLS))
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("Failed to start listener: %v\n", err)
+	}
+
+	defer func() {
+		err = listener.Close()
+		if err != nil {
+			log.Printf("Failed to close net listener: %v\n", err)
+		}
+	}()
+
+	return srv.Serve(listener)
+}
+
+// Listen to HTTP(S) connections, with the server certificate if MTLS is enabled
+func buildHTTPServer(addr string, enableMTLS bool) error {
+	scheme := buildScheme(enableMTLS)
+
+	log.Printf("Creating %s server on \"%s\"", scheme, addr)
+
+	// Create a Server instance to listen on port 8443 with the TLS config
+	srv := &http.Server{
+		Addr:      addr,
+		TLSConfig: buildTlsConfig(enableMTLS),
+	}
+
+	_ = server.NewHttpJobService()
+
+	if enableMTLS {
+		return srv.ListenAndServeTLS("../certs/cert.pem", "../certs/key.pem")
+	} else {
+		return srv.ListenAndServe()
+	}
+}
+
+func buildScheme(enableMTLS bool) string {
+	if enableMTLS {
+		return "HTTPS"
+	}
+	return "HTTP"
+}
+
+func buildTlsConfig(enableMtls bool) *tls.Config {
+	if !enableMtls {
+		return nil
+	}
+
+	// Create a CA certificate pool and add cert.pem to it
+	caCert, err := ioutil.ReadFile("../certs/cert.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Create the TLS Config with the CA pool and enable Client certificate validation
+	return &tls.Config{
+		ClientCAs:  caCertPool,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+	}
+}
+
+func buildAddr(host string, port int, enableMTLS bool) string {
+	port = buildPort(port, enableMTLS)
+	return fmt.Sprintf("%s:%d", host, port)
+}
+
+func buildPort(port int, enableMTLS bool) int {
 	if port != -1 {
-		return fmt.Sprintf(":%d", port)
+		return port
 	}
 
-	if mtls {
-		return ":8443"
+	if enableMTLS {
+		return 8443
 	}
 
-	return ":8080"
+	return 8080
 }

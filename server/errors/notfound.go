@@ -7,5 +7,5 @@ type NotFoundError struct {
 }
 
 func (e *NotFoundError) Error() string {
-	return fmt.Sprintf("process %s not found", e.Id)
+	return fmt.Sprintf("job \"%s\" not found", e.Id)
 }

@@ -1,4 +1,4 @@
-package net
+package client
 
 import (
 	"bytes"
@@ -17,39 +17,33 @@ type HttpClient struct {
 	client  *http.Client
 }
 
-func NewHttpClient(host string, port int, mtls bool, basicAuth bool) *HttpClient {
-	wrapped, _ := buildClient(mtls)
+func NewHttpClient(addr string, enableMTLS bool, basicAuth bool) *HttpClient {
+	scheme := "HTTP"
+	if enableMTLS {
+		scheme = "HTTPS"
+	}
+
+	log.Printf("Creating %s client connecting to \"%s\"", scheme, addr)
+	wrapped, _ := buildClient(enableMTLS)
 
 	hc := &HttpClient{
-		baseUrl: buildBaseUrl(host, buildPort(port, mtls), mtls, basicAuth),
+		baseUrl: buildBaseUrl(addr, enableMTLS, basicAuth),
 		client:  wrapped,
 	}
 
 	return hc
 }
 
-func buildPort(port int, mtls bool) int {
-	if port != -1 {
-		return port
-	}
-
-	if mtls {
-		return 8443
-	}
-
-	return 8080
-}
-
-func buildBaseUrl(host string, port int, mtls, basicAuth bool) string {
+func buildBaseUrl(addr string, enableMTLS, basicAuth bool) string {
 	credentials := ""
 	if basicAuth {
 		credentials = "user:test@"
 	}
-	if mtls {
-		return fmt.Sprintf("https://%s%s:%d", credentials, host, port)
+	if enableMTLS {
+		return fmt.Sprintf("https://%s", credentials, addr)
 	}
 
-	return fmt.Sprintf("http://%s%s:%d", credentials, host, port)
+	return fmt.Sprintf("http://%s", credentials, addr)
 }
 
 func buildClient(mtls bool) (*http.Client, error) {
@@ -149,7 +143,7 @@ func (c *HttpClient) post(endpoint string, data []byte) (string, error) {
 		log.Fatal(err)
 	}
 
-	defer c.close(response)
+	defer closeBody(response)
 
 	fmt.Println("Status:", response.Status)
 	fmt.Println("Headers:", response.Header)
@@ -163,9 +157,13 @@ func (c *HttpClient) post(endpoint string, data []byte) (string, error) {
 	return string(body[:]), err
 }
 
-func (c *HttpClient) close(r *http.Response) {
+func (c *HttpClient) Close() {
+
+}
+
+func closeBody(r *http.Response) {
 	err := r.Body.Close()
 	if err != nil {
-		log.Fatal("Cannot close stream")
+		log.Fatal("Cannot closeBody stream")
 	}
 }

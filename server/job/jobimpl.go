@@ -1,4 +1,4 @@
-package process
+package job
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type ProcessImpl struct {
+type JobImpl struct {
 	id      string
 	cmd     *exec.Cmd
 	streams map[string][]OutputStream
@@ -17,15 +17,15 @@ type ProcessImpl struct {
 	status  string
 }
 
-func New(executable string, args ...string) *ProcessImpl {
-	fmt.Printf("New process for \"%s %s\"\n", executable, strings.Join(args, " "))
+func New(executable string, args ...string) *JobImpl {
+	fmt.Printf("New job for \"%s %s\"\n", executable, strings.Join(args, " "))
 	cmd := exec.Command(executable, args...)
 	fmt.Printf("%+v", cmd)
 
 	// TODO: This could be a UUID or some other generated value
 	now := time.Now()
 
-	p := &ProcessImpl{
+	p := &JobImpl{
 		cmd:     cmd,
 		id:      fmt.Sprintf("%d", now.UnixNano()),
 		streams: make(map[string][]OutputStream),
@@ -36,17 +36,17 @@ func New(executable string, args ...string) *ProcessImpl {
 	return p
 }
 
-func (p *ProcessImpl) Id() string {
+func (p *JobImpl) Id() string {
 	return p.id
 }
 
-func (p *ProcessImpl) Start() string {
-	fmt.Println("Running process")
+func (p *JobImpl) Start(listener OnJobListener) string {
+	fmt.Println("Running job")
 
 	started := make(chan bool, 1)
 
 	go func() {
-		err := p.run(started)
+		err := p.run(started, listener)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -57,35 +57,35 @@ func (p *ProcessImpl) Start() string {
 	return p.id
 }
 
-func (p *ProcessImpl) Stop() error {
-	fmt.Println("Killing the process")
+func (p *JobImpl) Stop() error {
+	fmt.Println("Killing the job")
 	err := p.cmd.Process.Kill()
 
 	if err != nil {
-		return fmt.Errorf("cannot kill process %d: (%s)", p.pid(), err)
+		return fmt.Errorf("cannot kill job %d: (%s)", p.pid(), err)
 	}
 
 	p.status = "killed"
 	return nil
 }
 
-func (p *ProcessImpl) Wait() {
+func (p *JobImpl) Wait() {
 	<-p.done
 }
 
-func (p *ProcessImpl) Output() []OutputStream {
+func (p *JobImpl) Output() []OutputStream {
 	return p.streams["output"]
 }
 
-func (p *ProcessImpl) Error() []OutputStream {
+func (p *JobImpl) Error() []OutputStream {
 	return p.streams["error"]
 }
 
-func (p *ProcessImpl) Status() string {
+func (p *JobImpl) Status() string {
 	return p.status
 }
 
-func (p *ProcessImpl) run(started chan bool) error {
+func (p *JobImpl) run(started chan bool, listener OnJobListener) error {
 	stdout, _ := p.cmd.StdoutPipe()
 	stderr, _ := p.cmd.StderrPipe()
 
@@ -99,24 +99,29 @@ func (p *ProcessImpl) run(started chan bool) error {
 	p.pipe("error", stderr)
 
 	if err != nil {
-		return fmt.Errorf("cannot start process: (%s)", err)
+		return fmt.Errorf("cannot start job: (%s)", err)
 	}
 
-	fmt.Printf("Process PID: %d\n", pid)
+	fmt.Printf("Job PID: %d\n", pid)
 
 	err = p.cmd.Wait()
 
 	if err != nil {
-		return fmt.Errorf("cannot wait for process %d: (%s)", pid, err)
+		return fmt.Errorf("cannot wait for job %d: (%s)", pid, err)
 	}
 
 	p.status = "exited"
+
+	if listener != nil {
+		listener.OnFinishedJob(p)
+	}
+
 	p.done <- true
 
 	return nil
 }
 
-func (p *ProcessImpl) pipe(stream string, pipe io.ReadCloser) {
+func (p *JobImpl) pipe(stream string, pipe io.ReadCloser) {
 	scanner := bufio.NewScanner(pipe)
 	scanner.Split(bufio.ScanWords)
 
@@ -133,6 +138,6 @@ func (p *ProcessImpl) pipe(stream string, pipe io.ReadCloser) {
 	}
 }
 
-func (p *ProcessImpl) pid() int {
+func (p *JobImpl) pid() int {
 	return p.cmd.Process.Pid
 }

@@ -1,21 +1,21 @@
-package httphandler
+package server
 
 import (
 	"fmt"
 	"net/http"
 )
 
-type HttpBasicAuthHandler struct {
+type HttpBasicAuthService struct {
 	next http.Handler
 }
 
-func NewHttpBasicHandler(next http.Handler) *HttpBasicAuthHandler {
-	return &HttpBasicAuthHandler{
+func NewHttpBasicService(next http.Handler) *HttpBasicAuthService {
+	return &HttpBasicAuthService{
 		next: next,
 	}
 }
 
-func (h *HttpBasicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h *HttpBasicAuthService) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	fmt.Printf("Checking auth: %s\n", req.Body)
 
 	user, pass, ok := req.BasicAuth()
