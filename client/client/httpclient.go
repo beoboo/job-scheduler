@@ -6,7 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/beoboo/job-worker-service/protocol"
+	"github.com/beoboo/job-scheduler/library"
+	"github.com/beoboo/job-scheduler/library/config"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -40,16 +41,16 @@ func buildBaseUrl(addr string, enableMTLS, basicAuth bool) string {
 		credentials = "user:test@"
 	}
 	if enableMTLS {
-		return fmt.Sprintf("https://%s", credentials, addr)
+		return fmt.Sprintf("https://%s%s", credentials, addr)
 	}
 
-	return fmt.Sprintf("http://%s", credentials, addr)
+	return fmt.Sprintf("http://%s%s", credentials, addr)
 }
 
 func buildClient(mtls bool) (*http.Client, error) {
 	if mtls {
 		// Create a CA certificate pool and add cert.pem to it
-		caCert, err := ioutil.ReadFile("../certs/cert.pem")
+		caCert, err := ioutil.ReadFile(config.SERVER_CERT)
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +82,7 @@ func buildClient(mtls bool) (*http.Client, error) {
 }
 
 func (c *HttpClient) Start(executable string, args string) (string, error) {
-	data := protocol.StartRequestData{
+	data := library.StartRequestData{
 		Executable: executable,
 		Args:       args,
 	}
@@ -95,7 +96,7 @@ func (c *HttpClient) Start(executable string, args string) (string, error) {
 }
 
 func (c *HttpClient) Stop(id string) (string, error) {
-	data := protocol.StopRequestData{
+	data := library.StopRequestData{
 		Id: id,
 	}
 
@@ -108,7 +109,7 @@ func (c *HttpClient) Stop(id string) (string, error) {
 }
 
 func (c *HttpClient) Status(id string) (string, error) {
-	data := protocol.StatusRequestData{
+	data := library.StatusRequestData{
 		Id: id,
 	}
 
@@ -121,7 +122,7 @@ func (c *HttpClient) Status(id string) (string, error) {
 }
 
 func (c *HttpClient) Output(id string) (string, error) {
-	data := protocol.OutputRequestData{
+	data := library.OutputRequestData{
 		Id: id,
 	}
 

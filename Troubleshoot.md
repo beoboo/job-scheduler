@@ -33,4 +33,15 @@ The executable will be installed in the `GOBIN` folder (usually ``{HOME}/go/bin)
 Add the package option to the proto file
 
 ```
-option go_package = "example.com/package/name";```
+option go_package = "example.com/package/name";
+```
+
+## Check installed cgroups versions
+
+```
+grep cgroup /proc/filesystems
+```
+
+## Check certificate
+
+openssl x509 -text -noout -in cert.name

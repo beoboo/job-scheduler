@@ -3,8 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/beoboo/job-worker-service/client/client"
-	"google.golang.org/grpc"
+	"github.com/beoboo/job-scheduler/client/client"
 	"log"
 	"os"
 	"strings"
@@ -31,7 +30,7 @@ func main() {
 
 	var clnt client.Client
 	if *enableGRPC {
-		clnt = client.NewGrcpClient(addr, grpc.WithInsecure())
+		clnt = client.NewGrcpClient(addr, *enableMTLS)
 	} else {
 		clnt = client.NewHttpClient(addr, *enableMTLS, *basicAuth)
 	}
@@ -70,7 +69,7 @@ func buildPort(port int, enableMTLS bool) int {
 
 func start(clnt client.Client, args []string) {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: start EXECUTABLE [ARGS]")
+		log.Fatalln("Usage: start EXECUTABLE [ARGS]")
 	}
 
 	executable := args[0]
@@ -84,7 +83,7 @@ func start(clnt client.Client, args []string) {
 
 	output, err := clnt.Start(executable, params)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fmt.Println(output)
@@ -92,7 +91,7 @@ func start(clnt client.Client, args []string) {
 
 func stop(clnt client.Client, args []string) {
 	if len(args) != 1 {
-		log.Fatalf("Usage: stop ID")
+		log.Fatalln("Usage: stop ID")
 	}
 
 	id := args[0]
@@ -100,7 +99,7 @@ func stop(clnt client.Client, args []string) {
 	fmt.Printf("Stopping job \"%s\"\n", id)
 	output, err := clnt.Stop(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fmt.Println(output)
@@ -108,7 +107,7 @@ func stop(clnt client.Client, args []string) {
 
 func status(clnt client.Client, args []string) {
 	if len(args) != 1 {
-		log.Fatalf("Usage: status ID")
+		log.Fatalln("Usage: status ID")
 	}
 
 	id := args[0]
@@ -116,7 +115,7 @@ func status(clnt client.Client, args []string) {
 	fmt.Printf("Checking status for the job \"%s\"\n", id)
 	output, err := clnt.Status(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fmt.Println(output)
@@ -124,7 +123,7 @@ func status(clnt client.Client, args []string) {
 
 func output(clnt client.Client, args []string) {
 	if len(args) != 1 {
-		log.Fatalf("Usage: output ID")
+		log.Fatalln("Usage: output ID")
 	}
 
 	id := args[0]
@@ -132,7 +131,7 @@ func output(clnt client.Client, args []string) {
 	fmt.Printf("Retrieving output for the job \"%s\"\n", id)
 	output, err := clnt.Output(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fmt.Println(output)

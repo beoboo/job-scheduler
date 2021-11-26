@@ -1,3 +1,3 @@
-module github.com/beoboo/job-worker-service
+module github.com/beoboo/job-scheduler
 
 go 1.16

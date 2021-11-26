@@ -1,3 +1,3 @@
-module job-worker-service/playground
+module job-scheduler/playground
 
 go 1.16

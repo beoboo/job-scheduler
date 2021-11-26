@@ -1,0 +1,30 @@
+References:
+
+* https://blog.bracebin.com/achieving-perfect-ssl-labs-score-with-go
+* https://comodosslstore.com/resources/ssl-cipher-suites-ultimate-guide/
+* https://developpaper.com/seven-days-to-write-a-docker-with-go-the-first-day/
+* https://www.freecodecamp.org/news/how-to-validate-ssl-certificates-in-go/
+* https://gist.github.com/xjdrew/97be3811966c8300b724deabc10e38e2
+* https://github.com/antonefremov/teleport_job_worker
+* https://github.com/denji/golang-tls
+* https://github.com/grpc/grpc-go/tree/master/examples/features/authentication
+* https://github.com/grpc/grpc-go/tree/master/examples/features/keepalive
+* https://github.com/pedromazala/go-isolation-as-container
+* https://github.com/shuveb/containers-the-hard-way
+* https://go.dev/src/crypto/tls/cipher_suites.go
+* https://itnext.io/practical-guide-to-securing-grpc-connections-with-go-and-tls-part-1-f63058e9d6d1
+* https://kofo.dev/how-to-mtls-in-golang
+* https://medium.com/@ssttehrani/containers-from-scratch-with-golang-5276576f9909
+* https://medium.com/swlh/build-containers-from-scratch-in-go-part-1-namespaces-c07d2291038b
+* https://security.stackexchange.com/questions/44251/openssl-generate-different-types-of-self-signed-certificate
+* https://songrgg.github.io/programming/linux-namespace-part01-uts-pid/
+* https://songrgg.github.io/programming/linux-namespace-part02-uid-mount/
+* https://songrgg.github.io/programming/linux-namespace-part03-cgroups/
+* https://unixism.net/2020/06/containers-the-hard-way-gocker-a-mini-docker-written-in-go/
+* https://venilnoronha.io/a-step-by-step-guide-to-mtls-in-go
+* https://www.handracs.info/blog/grpcmtlsgo/
+* https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
+* https://www.reddit.com/r/golang/comments/fzfgj7/how_to_get_the_actual_running_state_of_a_process/
+* https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
+* https://www.thesslstore.com/blog/tls-1-3-everything-possibly-needed-know/
+* https://www.youtube.com/watch?v=g7ti09aFsXs&t=1613s
