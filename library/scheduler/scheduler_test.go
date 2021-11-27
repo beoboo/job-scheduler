@@ -1,121 +1,64 @@
 package scheduler
 
 import (
-	"github.com/beoboo/job-scheduler/library/job"
-	"strings"
-	"sync"
+	"github.com/beoboo/job-scheduler/library/assert"
+	"github.com/beoboo/job-scheduler/library/status"
 	"testing"
 	"time"
 )
 
-type DummyJob struct {
-	executable string
-	args       []string
-	logs       []string
-	m          sync.Mutex
-}
+var s = New()
 
-func (j *DummyJob) Id() string {
-	return "123"
-}
-
-func (j *DummyJob) Start(listener job.OnJobListener) string {
-	j.log("start")
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		listener.OnFinishedJob(j)
-	}()
-
-	return j.Id()
-}
-
-func (j *DummyJob) log(msg string) {
-	j.m.Lock()
-	defer j.m.Unlock()
-
-	j.logs = append(j.logs, msg)
-}
-
-func (j *DummyJob) Stop() error {
-	j.log("stop")
-
-	return nil
-}
-
-func (j *DummyJob) Wait() {
-	j.log("wait")
-}
-
-func (j *DummyJob) Output() []job.OutputStream {
-	if j.executable == "echo" {
-		return []job.OutputStream{
-			{Text: strings.Join(j.args, " ")},
-		}
-	}
-
-	return nil
-}
-
-func (j *DummyJob) Error() []job.OutputStream {
-	panic("implement me")
-}
-
-func (j *DummyJob) Status() string {
-	return ""
-}
-
-type DummyJobFactory struct {
-}
-
-func (f *DummyJobFactory) Create(executable string, args ...string) job.Job {
-	return &DummyJob{
-		executable: executable,
-		args:       args,
-	}
-}
-
-func TestStart(t *testing.T) {
-	factory := DummyJobFactory{}
-	s := New(&factory)
-
-	_, _ = s.Start("echo", "world")
+func TestStartStop(t *testing.T) {
+	id, _ := s.Start("echo", "world")
 
 	if s.Size() != 1 {
 		t.Fatalf("Job not started")
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	assertStatus(t, s, id, status.RUNNING)
 
-	if s.Size() != 0 {
-		t.Fatalf("Job not deleted")
-	}
+	time.Sleep(200 * time.Millisecond)
+
+	assertStatus(t, s, id, status.EXITED)
 }
 
 func TestStop(t *testing.T) {
-	factory := DummyJobFactory{}
-	s := New(&factory)
+	id, _ := s.Start("echo", "world")
 
-	id, _ := s.Start("sleep", "1")
+	assertStatus(t, s, id, status.RUNNING)
+
 	_, _ = s.Stop(id)
 
-	if s.Size() != 0 {
-		t.Fatalf("Job not stopped")
-	}
+	assertStatus(t, s, id, status.KILLED)
 }
 
 func TestOutput(t *testing.T) {
-	factory := DummyJobFactory{}
-	s := New(&factory)
-
-	expected := "hello"
-
-	id, _ := s.Start("echo", expected)
-	output, _ := s.Output(id)
-
-	if output[0].Text != expected {
-		t.Fatalf("Wrong output, want %s, got %s", output[0].Text, expected)
+	expectedLines := []string{
+		"Running for 1 times, sleeping for 0.1",
+		"#1",
 	}
 
+	id, _ := s.Start("../../test.sh", "1 0.1")
+
+	time.Sleep(150 * time.Millisecond)
+
+	assertOutput(t, s, id, expectedLines)
+
 	_, _ = s.Stop(id)
+
+	assertOutput(t, s, id, expectedLines)
+}
+
+func assertStatus(t *testing.T, s *Scheduler, id string, expected string) {
+	st, _ := s.Status(id)
+	assert.AssertStatus(t, st, expected)
+}
+
+func assertOutput(t *testing.T, s *Scheduler, id string, expected []string) {
+	o, err := s.Output(id)
+	if err != nil {
+		t.Fatalf("Expected output for job %s\n", id)
+	}
+	assert.AssertOutput(t, o, expected)
 }

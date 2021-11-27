@@ -4,42 +4,55 @@ import (
 	"fmt"
 	"github.com/beoboo/job-scheduler/library/errors"
 	"github.com/beoboo/job-scheduler/library/job"
-	"strings"
+	"github.com/beoboo/job-scheduler/library/log"
+	"github.com/beoboo/job-scheduler/library/stream"
 	"sync"
 )
 
 type Scheduler struct {
-	factory job.JobFactory
-	jobs    map[string]job.Job
-	mtx     sync.Mutex
+	logger *log.Logger
+	jobs   map[string]*job.Job
+	mtx    sync.Mutex
 }
 
-func New(factory job.JobFactory) *Scheduler {
+func New(logger *log.Logger) *Scheduler {
 	return &Scheduler{
-		factory: factory,
-		jobs:    make(map[string]job.Job),
+		logger: logger,
+		jobs:   make(map[string]*job.Job),
 	}
 }
 
-func (s *Scheduler) Start(executable string, args string) (string, string) {
-	fmt.Printf("Starting executable: \"%s %s\"\n", executable, args)
-	j := s.factory.Create(executable, strings.Split(args, " ")...)
+func (s *Scheduler) debug(format string, args ...interface{}) {
+	s.logger.Debugf(format, args...)
+}
 
-	id := j.Start(s)
-	fmt.Printf("Job ID: %s\n", id)
-	//fmt.Printf("Output: %s\n", j.Output())
-	//fmt.Printf("Error: %s\n", j.Error())
-	fmt.Printf("Status: %s\n", j.Status())
+func (s *Scheduler) info(format string, args ...interface{}) {
+	s.logger.Infof(format, args...)
+}
+
+func (s *Scheduler) Start(executable string, args string) (string, error) {
+	s.debug("Starting executable: \"%s %s\"\n", executable, args)
+	j := job.NewJob(executable, args)
+
+	id, err := j.Start()
+	if err != nil {
+		return "", err
+	}
+
+	s.debug("Job ID: %s\n", id)
+	//s.debug("Output: %s\n", j.Output())
+	//s.debug("Error: %s\n", j.Error())
+	s.debug("Status: %s\n", j.Status())
 
 	s.lock()
 	defer s.unlock()
 
 	s.jobs[j.Id()] = j
-	return j.Id(), j.Status()
+	return j.Id(), err
 }
 
 func (s *Scheduler) Stop(id string) (string, error) {
-	fmt.Printf("Stopping job %s\n", id)
+	s.debug("Stopping job %s\n", id)
 
 	j, ok := s.jobs[id]
 
@@ -52,13 +65,11 @@ func (s *Scheduler) Stop(id string) (string, error) {
 		return "", fmt.Errorf("cannot stop job: %s", id)
 	}
 
-	delete(s.jobs, id)
-
 	return j.Status(), nil
 }
 
 func (s *Scheduler) Status(id string) (string, error) {
-	fmt.Printf("Checking status for job \"%s\"\n", id)
+	s.debug("Checking status for job \"%s\"\n", id)
 
 	s.lock()
 	defer s.unlock()
@@ -72,8 +83,8 @@ func (s *Scheduler) Status(id string) (string, error) {
 	return j.Status(), nil
 }
 
-func (s *Scheduler) Output(id string) ([]job.OutputStream, error) {
-	fmt.Printf("Streaming output for job \"%s\"\n", id)
+func (s *Scheduler) Output(id string) (*stream.Stream, error) {
+	s.debug("Streaming output for job \"%s\"\n", id)
 
 	j, ok := s.jobs[id]
 
@@ -82,15 +93,6 @@ func (s *Scheduler) Output(id string) ([]job.OutputStream, error) {
 	}
 
 	return j.Output(), nil
-}
-
-func (s *Scheduler) OnFinishedJob(j job.Job) {
-	fmt.Printf("Job \"%s\" exited\n", j.Id())
-
-	s.lock()
-	defer s.unlock()
-
-	delete(s.jobs, j.Id())
 }
 
 func (s *Scheduler) Size() int {

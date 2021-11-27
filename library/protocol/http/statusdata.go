@@ -1,10 +1,10 @@
-package library
+package http
 
-type StopRequestData struct {
+type StatusRequestData struct {
 	Id string `json:"id"`
 }
 
-type StopResponseData struct {
+type StatusResponseData struct {
 	Id     string `json:"id"`
 	Status string `json:"status"`
 }

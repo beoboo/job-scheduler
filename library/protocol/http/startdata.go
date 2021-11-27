@@ -1,4 +1,4 @@
-package library
+package http
 
 type StartRequestData struct {
 	Executable string `json:"executable"`

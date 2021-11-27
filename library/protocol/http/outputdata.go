@@ -1,4 +1,4 @@
-package library
+package http
 
 type OutputRequestData struct {
 	Id string `json:"id"`

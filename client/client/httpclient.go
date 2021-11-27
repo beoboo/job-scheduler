@@ -6,8 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/beoboo/job-scheduler/library"
 	"github.com/beoboo/job-scheduler/library/config"
+	http2 "github.com/beoboo/job-scheduler/library/protocol/http"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -82,7 +82,7 @@ func buildClient(mtls bool) (*http.Client, error) {
 }
 
 func (c *HttpClient) Start(executable string, args string) (string, error) {
-	data := library.StartRequestData{
+	data := http2.StartRequestData{
 		Executable: executable,
 		Args:       args,
 	}
@@ -96,7 +96,7 @@ func (c *HttpClient) Start(executable string, args string) (string, error) {
 }
 
 func (c *HttpClient) Stop(id string) (string, error) {
-	data := library.StopRequestData{
+	data := http2.StopRequestData{
 		Id: id,
 	}
 
@@ -109,7 +109,7 @@ func (c *HttpClient) Stop(id string) (string, error) {
 }
 
 func (c *HttpClient) Status(id string) (string, error) {
-	data := library.StatusRequestData{
+	data := http2.StatusRequestData{
 		Id: id,
 	}
 
@@ -122,7 +122,7 @@ func (c *HttpClient) Status(id string) (string, error) {
 }
 
 func (c *HttpClient) Output(id string) (string, error) {
-	data := library.OutputRequestData{
+	data := http2.OutputRequestData{
 		Id: id,
 	}
 

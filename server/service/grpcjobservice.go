@@ -4,7 +4,6 @@ import (
 	context "context"
 	"fmt"
 	"github.com/beoboo/job-scheduler/library/errors"
-	"github.com/beoboo/job-scheduler/library/job"
 	"github.com/beoboo/job-scheduler/library/protocol"
 	"github.com/beoboo/job-scheduler/library/scheduler"
 	"google.golang.org/grpc/codes"
@@ -19,7 +18,7 @@ type GrpcJobService struct {
 }
 
 func NewGrpcJobService(enableMTLS bool) *GrpcJobService {
-	factory := job.JobFactoryImpl{}
+	factory := scheduler.Factory{}
 
 	return &GrpcJobService{
 		scheduler: scheduler.New(&factory),
