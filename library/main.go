@@ -16,28 +16,33 @@ func main() {
 	var wg sync.WaitGroup
 
 	run(1, example1, sched, &wg)
+	run(2, example2NoExecutable, sched, &wg)
 
 	wg.Wait()
 }
 
-func fatal(args ...interface{}) {
-	logger.Fatalln(args...)
+func fatalf(format string, args ...interface{}) {
+	logger.Fatalf(format+"\n", args...)
 }
 
-func info(format string, args ...interface{}) {
+func warnf(format string, args ...interface{}) {
+	logger.Warnf(format+"\n", args...)
+}
+
+func infof(format string, args ...interface{}) {
 	logger.Infof(format+"\n", args...)
 }
 
 func example1(s *scheduler.Scheduler) {
 	id := do(s.Start("../test.sh", "5 1"))
-	info("Job \"%s\" started\n", id)
+	infof("Job \"%s\" started", id)
 
 	status := do(s.Status(id))
-	info("Job status: %s", status)
+	infof("Job status: %s", status)
 
 	o, err := s.Output(id)
 	if err != nil {
-		fatal("Cannot retrieve job: %s", id)
+		fatalf("Cannot retrieve job: %s", id)
 	}
 
 	for {
@@ -48,15 +53,20 @@ func example1(s *scheduler.Scheduler) {
 
 		check(err)
 
-		info(l.String())
+		infof(l.String())
 	}
 
 	status = do(s.Status(id))
-	info("Job status: %s", status)
+	infof("Job status: %s", status)
+}
+
+func example2NoExecutable(s *scheduler.Scheduler) {
+	_, err := s.Start("../unknown", "")
+	warnf("Expected error: %s", err)
 }
 
 func run(id int, example func(s *scheduler.Scheduler), s *scheduler.Scheduler, wg *sync.WaitGroup) {
-	info("Example #%d", id)
+	infof("Example #%d", id)
 
 	wg.Add(1)
 
@@ -74,6 +84,6 @@ func do(val string, err error) string {
 
 func check(err error) {
 	if err != nil {
-		fatal(err)
+		fatalf("Unexpected: %s", err)
 	}
 }

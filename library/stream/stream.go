@@ -23,9 +23,19 @@ func NewStream() *Stream {
 	return s
 }
 
-func (s *Stream) IsClosed() bool {
+func (s *Stream) lock(id int) {
+	//println("locking", id)
 	s.m.Lock()
-	defer s.m.Unlock()
+}
+
+func (s *Stream) unlock(id int) {
+	//println("unlocking", id)
+	s.m.Unlock()
+}
+
+func (s *Stream) IsClosed() bool {
+	s.lock(1)
+	defer s.unlock(1)
 
 	return s.closed
 }
@@ -48,15 +58,15 @@ func (s *Stream) Read() (*Line, error) {
 }
 
 func (s *Stream) hasData() bool {
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.lock(2)
+	defer s.unlock(2)
 
 	return s.pos < len(s.lines)
 }
 
 func (s *Stream) readNext() *Line {
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.lock(3)
+	defer s.unlock(3)
 
 	pos := s.pos
 	s.pos += 1
@@ -69,23 +79,27 @@ func (s *Stream) Write(line Line) error {
 		return io.ErrClosedPipe
 	}
 
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.lock(4)
+	defer s.unlock(4)
 	s.lines = append(s.lines, line)
 
 	return nil
 }
 
 func (s *Stream) ResetPos() {
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.lock(5)
+	defer s.unlock(5)
 
 	s.pos = 0
 }
 
 func (s *Stream) Close() {
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.lock(6)
+	defer s.unlock(6)
+
+	if s.closed {
+		return
+	}
 
 	close(s.close)
 

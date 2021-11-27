@@ -22,7 +22,6 @@ type Job struct {
 }
 
 func NewJob(executable string, args string) *Job {
-	fmt.Printf("New job for \"%s %s\"\n", executable, args)
 	cmd := exec.Command(executable, strings.Split(args, " ")...)
 
 	// TODO: This could be a UUID or some other generated value
@@ -44,15 +43,10 @@ func (j *Job) Id() string {
 }
 
 func (j *Job) Start() (string, error) {
-	fmt.Println("Starting job...")
-
 	errCh := make(chan error, 1)
 
 	go func() {
-		err := j.run(errCh)
-		if err != nil {
-			fmt.Println(err)
-		}
+		j.run(errCh)
 	}()
 
 	// Waits for the job to have been started successfully
@@ -62,14 +56,15 @@ func (j *Job) Start() (string, error) {
 }
 
 func (j *Job) Stop() error {
-	fmt.Println("Killing the job")
+	j.lock(1)
 	err := j.cmd.Process.Kill()
+	j.unlock(1)
 
 	if err != nil {
 		return fmt.Errorf("cannot kill job %d: (%s)", j.pid(), err)
 	}
 
-	j.status = status.KILLED
+	j.updateStatus(status.KILLED)
 	return nil
 }
 
@@ -78,8 +73,8 @@ func (j *Job) Wait() {
 }
 
 func (j *Job) Output() *stream.Stream {
-	j.lock()
-	defer j.unlock()
+	j.lock(2)
+	defer j.unlock(2)
 
 	j.output.ResetPos()
 
@@ -87,21 +82,23 @@ func (j *Job) Output() *stream.Stream {
 }
 
 func (j *Job) Status() string {
-	j.lock()
-	defer j.unlock()
+	j.lock(3)
+	defer j.unlock(3)
 
 	return j.status
 }
 
-func (j *Job) lock() {
+func (j *Job) lock(id int) {
+	//println("locking %d", id)
 	j.m.Lock()
 }
 
-func (j *Job) unlock() {
+func (j *Job) unlock(id int) {
+	//println("unlocking %d", id)
 	j.m.Unlock()
 }
 
-func (j *Job) run(started chan error) error {
+func (j *Job) run(started chan error) {
 	stdout, _ := j.cmd.StdoutPipe()
 	stderr, _ := j.cmd.StderrPipe()
 
@@ -109,32 +106,19 @@ func (j *Job) run(started chan error) error {
 
 	started <- err
 	if err != nil {
-		return err
+		return
 	}
 
 	j.updateStatus(status.RUNNING)
-	pid := j.cmd.Process.Pid
 
 	j.pipe("output", stdout)
 	j.pipe("error", stderr)
 
-	if err != nil {
-		return fmt.Errorf("cannot start job: (%s)", err)
-	}
-
-	fmt.Printf("Job PID: %d\n", pid)
-
-	err = j.cmd.Wait()
-
-	if err != nil {
-		return fmt.Errorf("cannot wait for job %d: (%s)", pid, err)
-	}
+	_ = j.cmd.Wait()
 
 	j.updateStatus(status.EXITED)
 
 	j.done <- true
-
-	return nil
 }
 
 func (j *Job) pipe(channel string, pipe io.ReadCloser) {
@@ -145,8 +129,8 @@ func (j *Job) pipe(channel string, pipe io.ReadCloser) {
 		text := scanner.Text()
 
 		go func() {
-			j.lock()
-			defer j.unlock()
+			j.lock(4)
+			defer j.unlock(4)
 
 			_ = j.output.Write(stream.Line{
 				Channel: channel,
@@ -162,12 +146,20 @@ func (j *Job) pid() int {
 }
 
 func (j *Job) updateStatus(st string) {
-	fmt.Printf("Updating status to %s\n", st)
-	j.lock()
-	defer j.unlock()
+	j.lock(5)
+	defer j.unlock(5)
 
-	j.status = st
-	if st != status.RUNNING {
-		j.output.Close()
+	switch j.status {
+	case status.IDLE:
+		if st == status.RUNNING {
+			j.status = st
+		}
+	case status.RUNNING:
+		if st == status.EXITED || st == status.KILLED {
+			j.status = st
+			j.output.Close()
+		}
+	default:
+		return
 	}
 }

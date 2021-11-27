@@ -3,12 +3,12 @@ package job
 import (
 	"github.com/beoboo/job-scheduler/library/assert"
 	"github.com/beoboo/job-scheduler/library/status"
-	"log"
 	"testing"
+	"time"
 )
 
 func TestStart(t *testing.T) {
-	j := NewJob("echo", "hello")
+	j := NewJob("sleep", "0.1")
 
 	assertStatus(t, j, status.IDLE)
 
@@ -20,19 +20,9 @@ func TestStart(t *testing.T) {
 		t.Fatalf("Job PID should not be empty")
 	}
 
-	log.Println("here")
 	j.Wait()
-	log.Println("here")
+
 	assertStatus(t, j, status.EXITED)
-
-	expected := "hello"
-
-	o := j.Output()
-	l, _ := o.Read()
-
-	if l.Text != expected {
-		t.Fatalf("Job output should be %s, got %s", expected, l.Text)
-	}
 }
 
 func TestStop(t *testing.T) {
@@ -98,6 +88,7 @@ func TestNamespaces(t *testing.T) {
 }
 
 func assertStatus(t *testing.T, j *Job, expected string) {
+	time.Sleep(10 * time.Millisecond)
 	assert.AssertStatus(t, j.Status(), expected)
 }
 

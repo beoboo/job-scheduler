@@ -1,7 +1,6 @@
 package assert
 
 import (
-	"fmt"
 	"github.com/beoboo/job-scheduler/library/stream"
 	"testing"
 )
@@ -13,8 +12,6 @@ func AssertStatus(t *testing.T, st string, expected string) {
 }
 
 func AssertOutput(t *testing.T, o *stream.Stream, expected []string) {
-	fmt.Println("Checking output")
-
 	for _, e := range expected {
 		l, err := o.Read()
 		if err != nil {

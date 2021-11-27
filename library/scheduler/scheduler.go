@@ -23,15 +23,13 @@ func New(logger *log.Logger) *Scheduler {
 }
 
 func (s *Scheduler) debug(format string, args ...interface{}) {
-	s.logger.Debugf(format, args...)
-}
-
-func (s *Scheduler) info(format string, args ...interface{}) {
-	s.logger.Infof(format, args...)
+	if s.logger != nil {
+		s.logger.Debugf(format, args...)
+	}
 }
 
 func (s *Scheduler) Start(executable string, args string) (string, error) {
-	s.debug("Starting executable: \"%s %s\"\n", executable, args)
+	s.debug("Starting executable: \"%s\"\n", formatCmdLine(executable, args))
 	j := job.NewJob(executable, args)
 
 	id, err := j.Start()
@@ -40,15 +38,23 @@ func (s *Scheduler) Start(executable string, args string) (string, error) {
 	}
 
 	s.debug("Job ID: %s\n", id)
+	s.debug("Status: %s\n", j.Status())
 	//s.debug("Output: %s\n", j.Output())
 	//s.debug("Error: %s\n", j.Error())
-	s.debug("Status: %s\n", j.Status())
 
 	s.lock()
 	defer s.unlock()
 
 	s.jobs[j.Id()] = j
 	return j.Id(), err
+}
+
+func formatCmdLine(executable string, args string) string {
+	if len(args) == 0 {
+		return executable
+	}
+
+	return fmt.Sprintf("%s %s", executable, args)
 }
 
 func (s *Scheduler) Stop(id string) (string, error) {
