@@ -11,31 +11,31 @@ import (
 )
 
 type Scheduler struct {
-	logger *log.Logger
-	jobs   map[string]*job.Job
-	mtx    sync.Mutex
+	jobs map[string]*job.Job
+	mtx  sync.Mutex
 }
 
-func New(logger *log.Logger) *Scheduler {
+// New creates a scheduler.
+func New() *Scheduler {
 	return &Scheduler{
-		logger: logger,
-		jobs:   make(map[string]*job.Job),
+		jobs: make(map[string]*job.Job),
 	}
 }
 
+// Start runs a new job.Job.
 func (s *Scheduler) Start(executable string, args ...string) (string, error) {
-	s.debug("Starting executable: \"%s\"\n", helpers.FormatCmdLine(executable, args...))
-	j := job.New(s.logger, executable, args...)
+	log.Debugf("Starting executable: \"%s\"\n", helpers.FormatCmdLine(executable, args...))
+	j := job.New()
 
-	id, err := j.Start()
+	err := j.StartChild(executable, args...)
 	if err != nil {
 		return "", err
 	}
 
-	s.debug("Job ID: %s\n", id)
-	s.debug("Status: %s\n", j.Status())
-	//s.debug("Output: %s\n", j.Output())
-	//s.debug("Error: %s\n", j.Error())
+	log.Debugf("Job ID: %s\n", j.Id())
+	log.Debugf("Status: %s\n", j.Status())
+	//log.Debugf(utput: %s\n", j.Output())
+	//log.Debugf(rror: %s\n", j.Error())
 
 	s.lock("Start")
 	defer s.unlock("Start")
@@ -44,8 +44,9 @@ func (s *Scheduler) Start(executable string, args ...string) (string, error) {
 	return j.Id(), err
 }
 
+// Stop stops a running job.Job, or an error if the job.Job doesn't exist.
 func (s *Scheduler) Stop(id string) (string, error) {
-	s.debug("Stopping job %s\n", id)
+	log.Debugf("Stopping job %s\n", id)
 
 	s.lock("Stop")
 	defer s.unlock("Stop")
@@ -63,8 +64,9 @@ func (s *Scheduler) Stop(id string) (string, error) {
 	return j.Status(), nil
 }
 
+// Status returns the status of a job.Job, or an error if the job.Job doesn't exist.
 func (s *Scheduler) Status(id string) (string, error) {
-	s.debug("Checking status for job \"%s\"\n", id)
+	log.Debugf("Checking status for job \"%s\"\n", id)
 
 	s.lock("Status")
 	defer s.unlock("Status")
@@ -78,9 +80,12 @@ func (s *Scheduler) Status(id string) (string, error) {
 	return j.Status(), nil
 }
 
+// Output returns the stream of the stdout/stderr of a job.Job, or an error if the job.Job doesn't exist.
 func (s *Scheduler) Output(id string) (*stream.Stream, error) {
-	s.debug("Streaming output for job \"%s\"\n", id)
+	log.Debugf("Streaming output for job \"%s\"\n", id)
 
+	s.lock("Output")
+	defer s.unlock("Output")
 	j, ok := s.jobs[id]
 
 	if !ok {
@@ -90,6 +95,7 @@ func (s *Scheduler) Output(id string) (*stream.Stream, error) {
 	return j.Output(), nil
 }
 
+// Size returns the number of stored jobs.
 func (s *Scheduler) Size() int {
 	s.lock("Size")
 	defer s.unlock("Size")
@@ -98,17 +104,11 @@ func (s *Scheduler) Size() int {
 }
 
 func (s *Scheduler) lock(id string) {
-	s.debug("Scheduler locking %s", id)
+	log.Tracef("Scheduler locking %s\n", id)
 	s.mtx.Lock()
 }
 
 func (s *Scheduler) unlock(id string) {
-	s.debug("Scheduler unlocking %s", id)
+	log.Tracef("Scheduler unlocking %s\n", id)
 	s.mtx.Unlock()
-}
-
-func (s *Scheduler) debug(format string, args ...interface{}) {
-	if s.logger != nil {
-		s.logger.Debugf(format+"\n", args...)
-	}
 }

@@ -5,52 +5,109 @@ import (
 	"os"
 )
 
+const (
+	TRACE = 0
+	DEBUG = 1
+	INFO  = 2
+	WARN  = 3
+	ERROR = 4
+	FATAL = 4
+)
+
+var logger Logger
+
 type Logger struct {
-	info  *color.Color
+	level int
+	trace *color.Color
 	debug *color.Color
+	info  *color.Color
 	warn  *color.Color
+	error *color.Color
 	fatal *color.Color
 }
 
-func New() *Logger {
-	return &Logger{
-		info:  color.New(color.FgCyan),
+func init() {
+	logger = Logger{
+		level: DEBUG,
+		trace: color.New(color.FgBlue),
 		debug: color.New(color.FgHiBlack),
-		warn:  color.New(color.FgRed),
+		info:  color.New(color.FgCyan),
+		warn:  color.New(color.FgYellow),
+		error: color.New(color.FgRed),
 		fatal: color.New(color.FgHiRed),
 	}
 }
 
-func (l *Logger) Debugln(args ...interface{}) {
-	l.debug.Println(args...)
+func Traceln(args ...interface{}) {
+	if logger.level <= TRACE {
+		logger.trace.Println(args...)
+	}
 }
 
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.debug.Printf(format, args...)
+func Tracef(format string, args ...interface{}) {
+	if logger.level <= TRACE {
+		logger.trace.Printf(format, args...)
+	}
 }
 
-func (l *Logger) Infoln(args ...interface{}) {
-	l.info.Println(args...)
+func Debugln(args ...interface{}) {
+	if logger.level <= DEBUG {
+		logger.debug.Println(args...)
+	}
 }
 
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.info.Printf(format, args...)
+func Debugf(format string, args ...interface{}) {
+	if logger.level <= DEBUG {
+		logger.debug.Printf(format, args...)
+	}
 }
 
-func (l *Logger) Warnln(args ...interface{}) {
-	l.warn.Println(args...)
+func Infoln(args ...interface{}) {
+	if logger.level <= INFO {
+		logger.info.Println(args...)
+	}
 }
 
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.warn.Printf(format, args...)
+func Infof(format string, args ...interface{}) {
+	if logger.level <= INFO {
+		logger.info.Printf(format, args...)
+	}
 }
 
-func (l *Logger) Fatalln(args ...interface{}) {
-	l.fatal.Println(args...)
-	os.Exit(1)
+func Warnln(args ...interface{}) {
+	if logger.level <= WARN {
+		logger.warn.Println(args...)
+	}
 }
 
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.fatal.Printf(format, args...)
-	os.Exit(1)
+func Warnf(format string, args ...interface{}) {
+	if logger.level <= WARN {
+		logger.warn.Printf(format, args...)
+	}
+}
+
+func Errorln(args ...interface{}) {
+	if logger.level <= ERROR {
+		logger.error.Println(args...)
+	}
+}
+
+func Errorf(format string, args ...interface{}) {
+	if logger.level <= ERROR {
+		logger.error.Printf(format, args...)
+	}
+}
+
+func Fatalln(args ...interface{}) {
+	if logger.level <= FATAL {
+		logger.fatal.Println(args...)
+		os.Exit(1)
+	}
+}
+
+func Fatalf(format string, args ...interface{}) {
+	if logger.level <= FATAL {
+		logger.fatal.Printf(format, args...)
+		os.Exit(1)
+	}
 }

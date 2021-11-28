@@ -6,22 +6,16 @@ import (
 	"github.com/beoboo/job-scheduler/library/job"
 	"github.com/beoboo/job-scheduler/library/log"
 	"github.com/beoboo/job-scheduler/library/scheduler"
-	"github.com/beoboo/job-scheduler/library/stream"
-	"io"
 	"os"
-	"os/exec"
+	"strings"
 	"sync"
 )
 
-var logger *log.Logger
-
 func main() {
-	logger = log.New()
-
 	usage := "Usage: examples|schedule|run"
 
 	if len(os.Args) < 2 {
-		fatalf(usage)
+		log.Fatalf(usage)
 	}
 
 	command := os.Args[1]
@@ -37,29 +31,29 @@ func main() {
 	case "child":
 		child(args...)
 	default:
-		fatalf(usage)
+		log.Fatalf(usage)
 	}
 }
 
 // Runs a job through the scheduler
 func schedule() {
-	s := scheduler.New(logger)
+	s := scheduler.New()
 
 	id := do(s.Start("../test.sh", "5 1"))
-	infof("Job \"%s\" started", id)
+	log.Infof("Job \"%s\" started\n", id)
 
 	status := do(s.Status(id))
-	infof("Job status: %s", status)
+	log.Infof("Job status: %s\n", status)
 
 	o, err := s.Output(id)
 	if err != nil {
-		fatalf("Cannot retrieve job: %s", id)
+		log.Fatalf("Cannot retrieve job: %s\n", id)
 	}
 
 	printOutput(o)
 
 	status = do(s.Status(id))
-	infof("Job status: %s", status)
+	log.Infof("Job status: %s\n", status)
 
 	var wg sync.WaitGroup
 	wg.Wait()
@@ -68,32 +62,36 @@ func schedule() {
 // Runs a job without the scheduler, to verify job configuration and implementation
 // Wraps the job execution through a call to /proc/self/exe in order to provide proper isolation
 func run(args ...string) {
-	if len(args) < 2 {
-		fatalf("Usage: run [--mem N] [--pids N] [--cpu N] EXECUTABLE [ARGS]")
+	if len(args) < 1 {
+		log.Fatalf("Usage: run [--mem N] [--pids N] [--cpu N] EXECUTABLE [ARGS]\n")
 	}
 
 	err := flag.CommandLine.Parse(args)
 	if err != nil {
-		fatalf("Cannot parse arguments: %s", err)
+		log.Fatalf("Cannot parse arguments: %s\n", err)
 	}
 	remaining := flag.Args()
 
 	executable := remaining[0]
 	params := remaining[1:]
 
-	j := job.New(logger, executable, params...)
-	id, err := j.Start()
+	j := job.New()
+
+	err = j.StartChild(executable, params...)
 	if err != nil {
-		fatalf("Cannot run \"%s\": %s", helpers.FormatCmdLine(executable, params...), err)
+		log.Fatalf("Cannot run \"%s\": %s\n", strings.Join(params, " "), err)
 	}
 
-	infof("Job \"%s\" started", id)
+	log.Infof("Job \"%s\" started\n", j.Id())
 
 	o := j.Output()
 
 	printOutput(o)
 
 	j.Wait()
+
+	status := j.Status()
+	log.Infof("Job status: %s\n", status)
 }
 
 // Runs a job
@@ -104,38 +102,20 @@ func child(args ...string) {
 	//cpus := fs.Float64("cpus", 0, "Max CPU core usage")
 
 	if len(args) < 2 {
-		fatalf("Usage: child [--mem N] [--pids N] [--cpu N] EXECUTABLE [ARGS]")
+		log.Fatalf("Usage: child [--mem N] [--pids N] [--cpu N] JOB_ID EXECUTABLE [ARGS]\n")
 	}
 
 	err := flag.CommandLine.Parse(args)
 	if err != nil {
-		fatalf("Cannot parse arguments: %s", err)
+		log.Fatalf("Cannot parse arguments: %s\n", err)
 	}
 	remaining := flag.Args()
 
-	executable := remaining[0]
-	params := remaining[1:]
+	jobId := remaining[0]
+	executable := remaining[1]
+	params := remaining[2:]
 
-	infof("Executing \"%s\"", helpers.FormatCmdLine(executable, params...))
-	cmd := exec.Command(executable, params...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		fatalf("Unexpected: %s", err)
-	}
-}
-
-func printOutput(o *stream.Stream) {
-	for {
-		l, err := o.Read()
-		if err == io.EOF {
-			break
-		}
-
-		check(err)
-
-		infof(l.String())
-	}
+	log.Infof("[%s] Executing \"%s\"\n", jobId, helpers.FormatCmdLine(executable, params...))
+	c := job.Child{}
+	c.Run(jobId, executable, params...)
 }

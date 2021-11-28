@@ -7,7 +7,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	s := NewStream()
+	s := New()
 	defer s.Close()
 
 	if s.IsClosed() {
@@ -22,7 +22,7 @@ func write(s *Stream, t string) {
 }
 
 func TestWrite(t *testing.T) {
-	s := NewStream()
+	s := New()
 	defer s.Close()
 
 	expected := "line"
@@ -32,7 +32,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestResetPos(t *testing.T) {
-	s := NewStream()
+	s := New()
 	defer s.Close()
 
 	expected := "line"
@@ -40,13 +40,13 @@ func TestResetPos(t *testing.T) {
 
 	assertRead(t, s, expected)
 
-	s.ResetPos()
+	s.Rewind()
 
 	assertRead(t, s, expected)
 }
 
 func TestAllLines(t *testing.T) {
-	s := NewStream()
+	s := New()
 
 	write(s, "line1")
 
@@ -60,7 +60,7 @@ func TestAllLines(t *testing.T) {
 }
 
 func TestWaitNext(t *testing.T) {
-	s := NewStream()
+	s := New()
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
@@ -71,7 +71,7 @@ func TestWaitNext(t *testing.T) {
 }
 
 func TestCannotWriteToClosedStream(t *testing.T) {
-	s := NewStream()
+	s := New()
 	s.Close()
 
 	errCh := make(chan error, 1)
@@ -88,7 +88,7 @@ func TestCannotWriteToClosedStream(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	s := NewStream()
+	s := New()
 	s.Close()
 
 	assertError(t, s, io.EOF)

@@ -8,11 +8,11 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	j := New("sleep", "0.1")
+	j := New()
 
 	assertStatus(t, j, status.IDLE)
 
-	_, _ = j.Start()
+	_ = j.Start("sleep", "0.1")
 
 	assertStatus(t, j, status.RUNNING)
 
@@ -26,11 +26,11 @@ func TestStart(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	j := New("sleep", "1")
+	j := New()
 
 	assertStatus(t, j, status.IDLE)
 
-	_, _ = j.Start()
+	_ = j.Start("sleep", "1")
 
 	assertStatus(t, j, status.RUNNING)
 
@@ -43,7 +43,7 @@ func TestStop(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	j := New("../../test.sh", "2", "0.1")
+	j := New()
 
 	assertStatus(t, j, status.IDLE)
 
@@ -53,7 +53,7 @@ func TestOutput(t *testing.T) {
 		"#2",
 	}
 
-	_, err := j.Start()
+	err := j.Start("../../test.sh", "2", "0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,11 +71,11 @@ func TestOutput(t *testing.T) {
 // * Add resource isolation for using PID, mount, and networking namespaces.
 
 func TestNamespaces(t *testing.T) {
-	j := New("sleep", "1")
+	j := New()
 
 	assertStatus(t, j, "idle")
 
-	_, _ = j.Start()
+	_ = j.Start("sleep", "1")
 
 	assertStatus(t, j, status.RUNNING)
 

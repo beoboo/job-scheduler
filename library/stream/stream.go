@@ -8,7 +8,6 @@ import (
 )
 
 type Stream struct {
-	logger *log.Logger
 	lines  Lines
 	pos    int
 	close  chan bool
@@ -16,23 +15,18 @@ type Stream struct {
 	m      sync.Mutex
 }
 
-func New(logger *log.Logger) *Stream {
+// New creates a new Stream.
+func New() *Stream {
 	s := &Stream{
-		logger: logger,
-		lines:  Lines{},
-		close:  make(chan bool, 1),
+		lines: Lines{},
+		close: make(chan bool, 1),
 	}
 
 	return s
 }
 
-func (s *Stream) IsClosed() bool {
-	s.lock("IsClosed")
-	defer s.unlock("IsClosed")
-
-	return s.closed
-}
-
+// Read return an available Line, if it's not been read, or blocks until the next one is written.
+// Returns io.EOF if the stream is closed.
 func (s *Stream) Read() (*Line, error) {
 	for {
 		if s.hasData() {
@@ -48,6 +42,49 @@ func (s *Stream) Read() (*Line, error) {
 	}
 
 	return nil, io.EOF
+}
+
+// Write adds a new Line, or returns io.ErrClosedPipe if the stream is closed.
+func (s *Stream) Write(line Line) error {
+	if s.IsClosed() {
+		return io.ErrClosedPipe
+	}
+
+	s.lock("Write")
+	defer s.unlock("Write")
+	s.lines = append(s.lines, line)
+
+	return nil
+}
+
+// IsClosed returns if the stream is closed.
+func (s *Stream) IsClosed() bool {
+	s.lock("IsClosed")
+	defer s.unlock("IsClosed")
+
+	return s.closed
+}
+
+// Rewind sets the next read to be the first stored line.
+func (s *Stream) Rewind() {
+	s.lock("Rewind")
+	defer s.unlock("Rewind")
+
+	s.pos = 0
+}
+
+// Close closes the stream, so that no new writes can be added to it.
+func (s *Stream) Close() {
+	s.lock("Close")
+	defer s.unlock("Close")
+
+	if s.closed {
+		return
+	}
+
+	close(s.close)
+
+	s.closed = true
 }
 
 func (s *Stream) hasData() bool {
@@ -67,50 +104,12 @@ func (s *Stream) readNext() *Line {
 	return &s.lines[pos]
 }
 
-func (s *Stream) Write(line Line) error {
-	if s.IsClosed() {
-		return io.ErrClosedPipe
-	}
-
-	s.lock("Write")
-	defer s.unlock("Write")
-	s.lines = append(s.lines, line)
-
-	return nil
-}
-
-func (s *Stream) ResetPos() {
-	s.lock("ResetPos")
-	defer s.unlock("ResetPos")
-
-	s.pos = 0
-}
-
-func (s *Stream) Close() {
-	s.lock("Close")
-	defer s.unlock("Close")
-
-	if s.closed {
-		return
-	}
-
-	close(s.close)
-
-	s.closed = true
-}
-
 func (s *Stream) lock(id string) {
-	s.debug("Stream locking %s", id)
+	log.Tracef("Stream locking %s\n", id)
 	s.m.Lock()
 }
 
 func (s *Stream) unlock(id string) {
-	s.debug("Stream unlocking %s", id)
+	log.Tracef("Stream unlocking %s\n", id)
 	s.m.Unlock()
-}
-
-func (s *Stream) debug(format string, args ...interface{}) {
-	if s.logger != nil {
-		s.logger.Debugf(format+"\n", args...)
-	}
 }

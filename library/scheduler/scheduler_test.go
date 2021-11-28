@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var s = New(nil)
+var s = New()
 
 func TestStartStop(t *testing.T) {
 	id, _ := s.Start("echo", "world")

@@ -9,11 +9,14 @@ import (
 	"io"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 )
 
+// Job wraps the execution of a process, capturing its stdout and stderr streams,
+// and providing the process status
+// TODO: it should also report the exit status code
 type Job struct {
-	logger *log.Logger
 	id     string
 	cmd    *exec.Cmd
 	output *stream.Stream
@@ -22,41 +25,66 @@ type Job struct {
 	m      sync.Mutex
 }
 
-func New(logger *log.Logger, executable string, args ...string) *Job {
-	cmd := exec.Command(executable, args...)
-
-	// TODO: This could be a UUID or some other random generated value
-	now := time.Now()
-
+// New creates a new Job
+func New() *Job {
 	p := &Job{
-		logger: logger,
-		cmd:    cmd,
-		id:     fmt.Sprintf("%d", now.UnixNano()),
+		id:     generateRandomId(),
 		done:   make(chan bool),
-		output: stream.New(logger),
+		output: stream.New(),
 		status: status.IDLE,
 	}
 
 	return p
 }
 
+// TODO: This could be a UUID or some other random generated value
+func generateRandomId() string {
+	now := time.Now()
+	return fmt.Sprintf("%d", now.UnixNano())
+}
+
+// Id returns the random job ID
 func (j *Job) Id() string {
 	return j.id
 }
 
-func (j *Job) Start() (string, error) {
+// StartChild starts the execution of a process through a parent/child mechanism
+func (j *Job) StartChild(executable string, args ...string) error {
+	args = append([]string{
+		"child",    // Main subcommand
+		j.id,       // The job ID
+		executable, // The original executable
+	}, args...)
+
+	return j.Start("/proc/self/exe", args...)
+}
+
+// Start starts the execution of a process, capturing its output
+func (j *Job) Start(executable string, args ...string) error {
+	cmd := exec.Command(executable, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNS |
+			syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWIPC,
+	}
+
+	j.cmd = cmd
+
 	errCh := make(chan error, 1)
+	log.Debugf("Starting: %s\n", j.cmd.Path)
 
 	go func() {
 		j.run(errCh)
 	}()
 
-	// Waits for the job to have been started successfully
+	// Waits for the job to be started successfully
 	err := <-errCh
 
-	return j.id, err
+	return err
 }
 
+// Stop stops a running process
 func (j *Job) Stop() error {
 	j.lock("Stop")
 	err := j.cmd.Process.Kill()
@@ -70,19 +98,17 @@ func (j *Job) Stop() error {
 	return nil
 }
 
-func (j *Job) Wait() {
-	<-j.done
-}
-
+// Output returns the stream of captured stdout/stderr of the running process.
 func (j *Job) Output() *stream.Stream {
 	j.lock("Output")
 	defer j.unlock("Output")
 
-	j.output.ResetPos()
+	j.output.Rewind()
 
 	return j.output
 }
 
+// Status returns the current status of the Job
 func (j *Job) Status() string {
 	j.lock("Status")
 	defer j.unlock("Status")
@@ -90,7 +116,14 @@ func (j *Job) Status() string {
 	return j.status
 }
 
+// Wait blocks until the process is completed
+func (j *Job) Wait() {
+	<-j.done
+}
+
 func (j *Job) run(started chan error) {
+	log.Debugf("Running: %s\n", j.cmd.Path)
+
 	stdout, _ := j.cmd.StdoutPipe()
 	stderr, _ := j.cmd.StderrPipe()
 
@@ -124,6 +157,7 @@ func (j *Job) pipe(channel string, pipe io.ReadCloser) {
 			j.lock("pipe")
 			defer j.unlock("pipe")
 
+			log.Debugf("[%s] %s\n", channel, text)
 			_ = j.output.Write(stream.Line{
 				Channel: channel,
 				Time:    time.Now(),
@@ -157,17 +191,11 @@ func (j *Job) updateStatus(st string) {
 }
 
 func (j *Job) lock(id string) {
-	j.debug("Job locking %s", id)
+	log.Tracef("Job locking %s\n", id)
 	j.m.Lock()
 }
 
 func (j *Job) unlock(id string) {
-	j.debug("Job unlocking %s", id)
+	log.Tracef("Job unlocking %s\n", id)
 	j.m.Unlock()
-}
-
-func (j *Job) debug(format string, args ...interface{}) {
-	if j.logger != nil {
-		j.logger.Debugf(format+"\n", args...)
-	}
 }

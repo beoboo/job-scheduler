@@ -1,16 +1,10 @@
 package main
 
-func fatalf(format string, args ...interface{}) {
-	logger.Fatalf(format+"\n", args...)
-}
-
-func warnf(format string, args ...interface{}) {
-	logger.Warnf(format+"\n", args...)
-}
-
-func infof(format string, args ...interface{}) {
-	logger.Infof(format+"\n", args...)
-}
+import (
+	"github.com/beoboo/job-scheduler/library/log"
+	"github.com/beoboo/job-scheduler/library/stream"
+	"io"
+)
 
 func do(val string, err error) string {
 	check(err)
@@ -20,6 +14,23 @@ func do(val string, err error) string {
 
 func check(err error) {
 	if err != nil {
-		fatalf("Unexpected: %s", err)
+		log.Fatalf("Unexpected: %s\n", err)
+	}
+}
+
+func printOutput(o *stream.Stream) {
+	for {
+		l, err := o.Read()
+		if err == io.EOF {
+			break
+		}
+
+		check(err)
+
+		if l.Channel == "output" {
+			log.Infoln(l)
+		} else {
+			log.Warnln(l)
+		}
 	}
 }

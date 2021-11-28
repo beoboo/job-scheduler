@@ -1,13 +1,14 @@
 package main
 
 import (
+	"github.com/beoboo/job-scheduler/library/log"
 	"github.com/beoboo/job-scheduler/library/scheduler"
 	"io"
 	"sync"
 )
 
 func runExamples() {
-	sched := scheduler.New(logger)
+	sched := scheduler.New()
 
 	var wg sync.WaitGroup
 
@@ -23,7 +24,7 @@ func runExamples() {
 }
 
 func runExample(id int, example func(s *scheduler.Scheduler), s *scheduler.Scheduler, wg *sync.WaitGroup) {
-	infof("Example #%d", id)
+	log.Infof("Example #%d\n", id)
 
 	wg.Add(1)
 
@@ -34,15 +35,15 @@ func runExample(id int, example func(s *scheduler.Scheduler), s *scheduler.Sched
 }
 
 func example1(s *scheduler.Scheduler) {
-	id := do(s.Start("../test.sh", "5 1"))
-	infof("Job \"%s\" started", id)
+	id := do(s.Start("../test.sh", "5", "1"))
+	log.Infof("Job \"%s\" started\n", id)
 
 	status := do(s.Status(id))
-	infof("Job status: %s", status)
+	log.Infof("Job status: %s\n", status)
 
 	o, err := s.Output(id)
 	if err != nil {
-		fatalf("Cannot retrieve job: %s", id)
+		log.Fatalf("Cannot retrieve job: %s\n", id)
 	}
 
 	for {
@@ -53,14 +54,14 @@ func example1(s *scheduler.Scheduler) {
 
 		check(err)
 
-		infof(l.String())
+		log.Infoln(l)
 	}
 
 	status = do(s.Status(id))
-	infof("Job status: %s", status)
+	log.Infof("Job status: %s\n", status)
 }
 
 func example2NoExecutable(s *scheduler.Scheduler) {
 	_, err := s.Start("../unknown", "")
-	warnf("Expected error: %s", err)
+	log.Warnf("Expected error: %s\n", err)
 }
