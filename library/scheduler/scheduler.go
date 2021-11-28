@@ -11,14 +11,16 @@ import (
 )
 
 type Scheduler struct {
-	jobs map[string]*job.Job
-	mtx  sync.Mutex
+	runJobAsChild bool
+	jobs          map[string]*job.Job
+	mtx           sync.Mutex
 }
 
 // New creates a scheduler.
-func New() *Scheduler {
+func New(runJobAsChild bool) *Scheduler {
 	return &Scheduler{
-		jobs: make(map[string]*job.Job),
+		runJobAsChild: runJobAsChild,
+		jobs:          make(map[string]*job.Job),
 	}
 }
 
@@ -27,9 +29,16 @@ func (s *Scheduler) Start(executable string, args ...string) (string, error) {
 	log.Debugf("Starting executable: \"%s\"\n", helpers.FormatCmdLine(executable, args...))
 	j := job.New()
 
-	err := j.StartChild(executable, args...)
-	if err != nil {
-		return "", err
+	if s.runJobAsChild {
+		err := j.StartChild(executable, args...)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		err := j.Start(executable, args...)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	log.Debugf("Job ID: %s\n", j.Id())
@@ -41,7 +50,7 @@ func (s *Scheduler) Start(executable string, args ...string) (string, error) {
 	defer s.unlock("Start")
 
 	s.jobs[j.Id()] = j
-	return j.Id(), err
+	return j.Id(), nil
 }
 
 // Stop stops a running job.Job, or an error if the job.Job doesn't exist.

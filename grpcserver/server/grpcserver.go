@@ -3,10 +3,10 @@ package server
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/beoboo/job-scheduler/library/config"
-	"github.com/beoboo/job-scheduler/library/protocol"
-	"github.com/beoboo/job-scheduler/library/secret"
-	"github.com/beoboo/job-scheduler/server/service"
+	"github.com/beoboo/job-scheduler/grpcserver/service"
+	"github.com/beoboo/job-scheduler/pkg/config"
+	"github.com/beoboo/job-scheduler/pkg/protocol"
+	"github.com/beoboo/job-scheduler/pkg/secret"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -36,7 +36,7 @@ func ServeGrpc(addr string, enableMTLS bool) error {
 
 	srv := grpc.NewServer(options(enableMTLS)...)
 
-	protocol.RegisterJobSchedulerServer(srv, service.NewGrpcJobService(enableMTLS))
+	protocol.RegisterJobSchedulerServer(srv, service.NewGrpcJobService())
 
 	return srv.Serve(listener)
 }

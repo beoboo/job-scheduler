@@ -10,7 +10,6 @@ import (
 
 func main() {
 	enableMTLS := flag.Bool("mtls", false, "Enable mTLS")
-	enableGRPC := flag.Bool("grpc", false, "Enable GRPC")
 	basicAuth := flag.Bool("basic-auth", false, "Enable basic auth")
 	host := flag.String("host", "localhost", "Remote host")
 	port := flag.Int("port", -1, "Remote port")
@@ -27,12 +26,7 @@ func main() {
 
 	addr := buildAddr(*host, *port, *enableMTLS)
 
-	var clnt client.Client
-	if *enableGRPC {
-		clnt = client.NewGrcpClient(addr, *enableMTLS)
-	} else {
-		clnt = client.NewHttpClient(addr, *enableMTLS, *basicAuth)
-	}
+	clnt := client.NewHttpClient(addr, *enableMTLS, *basicAuth)
 
 	defer clnt.Close()
 
@@ -66,7 +60,7 @@ func buildPort(port int, enableMTLS bool) int {
 	return 8080
 }
 
-func start(clnt client.Client, args []string) {
+func start(clnt *client.HttpClient, args []string) {
 	if len(args) < 2 {
 		log.Fatalln("Usage: start EXECUTABLE [ARGS]")
 	}
@@ -88,7 +82,7 @@ func start(clnt client.Client, args []string) {
 	fmt.Println(output)
 }
 
-func stop(clnt client.Client, args []string) {
+func stop(clnt *client.HttpClient, args []string) {
 	if len(args) != 1 {
 		log.Fatalln("Usage: stop ID")
 	}
@@ -104,7 +98,7 @@ func stop(clnt client.Client, args []string) {
 	fmt.Println(output)
 }
 
-func status(clnt client.Client, args []string) {
+func status(clnt *client.HttpClient, args []string) {
 	if len(args) != 1 {
 		log.Fatalln("Usage: status ID")
 	}
@@ -120,7 +114,7 @@ func status(clnt client.Client, args []string) {
 	fmt.Println(output)
 }
 
-func output(clnt client.Client, args []string) {
+func output(clnt *client.HttpClient, args []string) {
 	if len(args) != 1 {
 		log.Fatalln("Usage: output ID")
 	}

@@ -4,10 +4,11 @@ import (
 	context "context"
 	"fmt"
 	"github.com/beoboo/job-scheduler/library/errors"
-	"github.com/beoboo/job-scheduler/library/protocol"
 	"github.com/beoboo/job-scheduler/library/scheduler"
+	"github.com/beoboo/job-scheduler/pkg/protocol"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"io"
 	"strings"
 )
 
@@ -17,11 +18,9 @@ type GrpcJobService struct {
 	protocol.UnimplementedJobSchedulerServer
 }
 
-func NewGrpcJobService(enableMTLS bool) *GrpcJobService {
-	factory := scheduler.Factory{}
-
+func NewGrpcJobService() *GrpcJobService {
 	return &GrpcJobService{
-		scheduler: scheduler.New(&factory),
+		scheduler: scheduler.New(true),
 	}
 }
 
@@ -31,7 +30,11 @@ func (s GrpcJobService) Start(ctx context.Context, job *protocol.Job) (*protocol
 		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid executable: \"%s\"", executable))
 	}
 
-	id, sts := s.scheduler.Start(job.Executable, job.Args)
+	id, err := s.scheduler.Start(job.Executable, job.Args)
+	if err != nil {
+		return nil, status.Errorf(codes.Aborted, fmt.Sprintf("cannot start executable: \"%s\": %s", executable, err))
+	}
+	sts, err := s.scheduler.Status(id)
 
 	return &protocol.JobStatus{Status: sts, Id: id}, nil
 }
@@ -60,7 +63,14 @@ func (s GrpcJobService) Output(id *protocol.JobId, stream protocol.JobScheduler_
 		return status.Errorf(errorCode(err), err.Error())
 	}
 
-	for _, o := range output {
+	for {
+		o, err := output.Read()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return status.Errorf(errorCode(err), err.Error())
+		}
 		if err := stream.Send(&protocol.JobOutput{
 			Channel: o.Channel,
 			Text:    o.Text,

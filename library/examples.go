@@ -8,7 +8,7 @@ import (
 )
 
 func runExamples() {
-	sched := scheduler.New()
+	sched := scheduler.New(true)
 
 	var wg sync.WaitGroup
 

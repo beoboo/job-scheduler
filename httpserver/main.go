@@ -9,7 +9,6 @@ import (
 
 func main() {
 	enableMTLS := flag.Bool("mtls", false, "Enable mTLS")
-	enableGRPC := flag.Bool("grpc", false, "Enable GRPC")
 	host := flag.String("host", "localhost", "Remote host")
 	port := flag.Int("port", -1, "Server port")
 
@@ -17,11 +16,7 @@ func main() {
 
 	addr := buildAddr(*host, *port, *enableMTLS)
 
-	if *enableGRPC {
-		log.Fatal(server.ServeGrpc(addr, *enableMTLS))
-	} else {
-		log.Fatal(server.ServeHttp(addr, *enableMTLS))
-	}
+	log.Fatal(server.ServeHttp(addr, *enableMTLS))
 }
 
 func buildAddr(host string, port int, enableMTLS bool) string {

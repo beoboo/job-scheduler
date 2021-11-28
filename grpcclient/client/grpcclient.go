@@ -4,9 +4,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/beoboo/job-scheduler/library/config"
-	"github.com/beoboo/job-scheduler/library/protocol"
-	"github.com/beoboo/job-scheduler/library/secret"
+	"github.com/beoboo/job-scheduler/pkg/config"
+	"github.com/beoboo/job-scheduler/pkg/protocol"
+	"github.com/beoboo/job-scheduler/pkg/secret"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
@@ -17,20 +17,20 @@ import (
 	"log"
 )
 
-type GrcpJobClient struct {
+type GrcpClient struct {
 	client     protocol.JobSchedulerClient
 	ctx        context.Context
 	connection *grpc.ClientConn
 }
 
-func NewGrcpClient(addr string, enableMTLS bool) *GrcpJobClient {
+func NewGrcpClient(addr string, enableMTLS bool) *GrcpClient {
 	log.Printf("Creating GRPC client connecting to \"%s\"", addr)
 	conn, err := grpc.Dial(addr, options(enableMTLS)...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	client := &GrcpJobClient{
+	client := &GrcpClient{
 		client: protocol.NewJobSchedulerClient(conn),
 		ctx:    context.Background(),
 
@@ -83,14 +83,14 @@ func loadCredentials() credentials.TransportCredentials {
 	return credentials.NewTLS(tlsConfig)
 }
 
-func (c *GrcpJobClient) Close() {
+func (c *GrcpClient) Close() {
 	err := c.connection.Close()
 	if err != nil {
 		log.Fatalf("Unable to closeBody gRPC channel. %v\n", err)
 	}
 }
 
-func (c *GrcpJobClient) Start(executable string, args string) (string, error) {
+func (c *GrcpClient) Start(executable string, args string) (string, error) {
 	request := protocol.Job{
 		Executable: executable,
 		Args:       args,
@@ -105,7 +105,7 @@ func (c *GrcpJobClient) Start(executable string, args string) (string, error) {
 	return js.Status, nil
 }
 
-func (c *GrcpJobClient) Stop(id string) (string, error) {
+func (c *GrcpClient) Stop(id string) (string, error) {
 	request := protocol.JobId{
 		Id: id,
 	}
@@ -119,7 +119,7 @@ func (c *GrcpJobClient) Stop(id string) (string, error) {
 	return js.Status, nil
 }
 
-func (c *GrcpJobClient) Status(id string) (string, error) {
+func (c *GrcpClient) Status(id string) (string, error) {
 	request := protocol.JobId{
 		Id: id,
 	}
@@ -133,7 +133,7 @@ func (c *GrcpJobClient) Status(id string) (string, error) {
 	return js.Status, nil
 }
 
-func (c *GrcpJobClient) Output(id string) (string, error) {
+func (c *GrcpClient) Output(id string) (string, error) {
 	request := protocol.JobId{
 		Id: id,
 	}
