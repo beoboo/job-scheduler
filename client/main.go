@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/beoboo/job-scheduler/client/client"
 	"log"
-	"os"
 	"strings"
 )
 
@@ -68,7 +67,7 @@ func buildPort(port int, enableMTLS bool) int {
 }
 
 func start(clnt client.Client, args []string) {
-	if len(os.Args) < 2 {
+	if len(args) < 2 {
 		log.Fatalln("Usage: start EXECUTABLE [ARGS]")
 	}
 

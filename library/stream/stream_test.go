@@ -49,6 +49,10 @@ func TestAllLines(t *testing.T) {
 	s := NewStream()
 
 	write(s, "line1")
+
+	// This is required to avoid write goroutines to overlap (could be solved in other ways too)
+	time.Sleep(10 * time.Millisecond)
+
 	write(s, "line2")
 
 	assertRead(t, s, "line1")

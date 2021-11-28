@@ -39,7 +39,7 @@ func TestOutput(t *testing.T) {
 		"#1",
 	}
 
-	id, _ := s.Start("../../test.sh", "1 0.1")
+	id, _ := s.Start("../../test.sh", "1", "0.1")
 
 	time.Sleep(150 * time.Millisecond)
 

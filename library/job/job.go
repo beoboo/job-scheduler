@@ -3,16 +3,17 @@ package job
 import (
 	"bufio"
 	"fmt"
+	"github.com/beoboo/job-scheduler/library/log"
 	"github.com/beoboo/job-scheduler/library/status"
 	"github.com/beoboo/job-scheduler/library/stream"
 	"io"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 )
 
 type Job struct {
+	logger *log.Logger
 	id     string
 	cmd    *exec.Cmd
 	output *stream.Stream
@@ -21,17 +22,18 @@ type Job struct {
 	m      sync.Mutex
 }
 
-func NewJob(executable string, args string) *Job {
-	cmd := exec.Command(executable, strings.Split(args, " ")...)
+func New(logger *log.Logger, executable string, args ...string) *Job {
+	cmd := exec.Command(executable, args...)
 
-	// TODO: This could be a UUID or some other generated value
+	// TODO: This could be a UUID or some other random generated value
 	now := time.Now()
 
 	p := &Job{
+		logger: logger,
 		cmd:    cmd,
 		id:     fmt.Sprintf("%d", now.UnixNano()),
 		done:   make(chan bool),
-		output: stream.NewStream(),
+		output: stream.New(logger),
 		status: status.IDLE,
 	}
 
@@ -56,9 +58,9 @@ func (j *Job) Start() (string, error) {
 }
 
 func (j *Job) Stop() error {
-	j.lock(1)
+	j.lock("Stop")
 	err := j.cmd.Process.Kill()
-	j.unlock(1)
+	j.unlock("Stop")
 
 	if err != nil {
 		return fmt.Errorf("cannot kill job %d: (%s)", j.pid(), err)
@@ -73,8 +75,8 @@ func (j *Job) Wait() {
 }
 
 func (j *Job) Output() *stream.Stream {
-	j.lock(2)
-	defer j.unlock(2)
+	j.lock("Output")
+	defer j.unlock("Output")
 
 	j.output.ResetPos()
 
@@ -82,20 +84,10 @@ func (j *Job) Output() *stream.Stream {
 }
 
 func (j *Job) Status() string {
-	j.lock(3)
-	defer j.unlock(3)
+	j.lock("Status")
+	defer j.unlock("Status")
 
 	return j.status
-}
-
-func (j *Job) lock(id int) {
-	//println("locking %d", id)
-	j.m.Lock()
-}
-
-func (j *Job) unlock(id int) {
-	//println("unlocking %d", id)
-	j.m.Unlock()
 }
 
 func (j *Job) run(started chan error) {
@@ -129,8 +121,8 @@ func (j *Job) pipe(channel string, pipe io.ReadCloser) {
 		text := scanner.Text()
 
 		go func() {
-			j.lock(4)
-			defer j.unlock(4)
+			j.lock("pipe")
+			defer j.unlock("pipe")
 
 			_ = j.output.Write(stream.Line{
 				Channel: channel,
@@ -146,8 +138,8 @@ func (j *Job) pid() int {
 }
 
 func (j *Job) updateStatus(st string) {
-	j.lock(5)
-	defer j.unlock(5)
+	j.lock("updateStatus")
+	defer j.unlock("updateStatus")
 
 	switch j.status {
 	case status.IDLE:
@@ -161,5 +153,21 @@ func (j *Job) updateStatus(st string) {
 		}
 	default:
 		return
+	}
+}
+
+func (j *Job) lock(id string) {
+	j.debug("Job locking %s", id)
+	j.m.Lock()
+}
+
+func (j *Job) unlock(id string) {
+	j.debug("Job unlocking %s", id)
+	j.m.Unlock()
+}
+
+func (j *Job) debug(format string, args ...interface{}) {
+	if j.logger != nil {
+		j.logger.Debugf(format+"\n", args...)
 	}
 }

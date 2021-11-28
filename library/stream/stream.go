@@ -1,12 +1,14 @@
 package stream
 
 import (
+	"github.com/beoboo/job-scheduler/library/log"
 	"io"
 	"sync"
 	"time"
 )
 
 type Stream struct {
+	logger *log.Logger
 	lines  Lines
 	pos    int
 	close  chan bool
@@ -14,28 +16,19 @@ type Stream struct {
 	m      sync.Mutex
 }
 
-func NewStream() *Stream {
+func New(logger *log.Logger) *Stream {
 	s := &Stream{
-		lines: Lines{},
-		close: make(chan bool, 1),
+		logger: logger,
+		lines:  Lines{},
+		close:  make(chan bool, 1),
 	}
 
 	return s
 }
 
-func (s *Stream) lock(id int) {
-	//println("locking", id)
-	s.m.Lock()
-}
-
-func (s *Stream) unlock(id int) {
-	//println("unlocking", id)
-	s.m.Unlock()
-}
-
 func (s *Stream) IsClosed() bool {
-	s.lock(1)
-	defer s.unlock(1)
+	s.lock("IsClosed")
+	defer s.unlock("IsClosed")
 
 	return s.closed
 }
@@ -58,15 +51,15 @@ func (s *Stream) Read() (*Line, error) {
 }
 
 func (s *Stream) hasData() bool {
-	s.lock(2)
-	defer s.unlock(2)
+	s.lock("hasData")
+	defer s.unlock("hasData")
 
 	return s.pos < len(s.lines)
 }
 
 func (s *Stream) readNext() *Line {
-	s.lock(3)
-	defer s.unlock(3)
+	s.lock("readNext")
+	defer s.unlock("readNext")
 
 	pos := s.pos
 	s.pos += 1
@@ -79,23 +72,23 @@ func (s *Stream) Write(line Line) error {
 		return io.ErrClosedPipe
 	}
 
-	s.lock(4)
-	defer s.unlock(4)
+	s.lock("Write")
+	defer s.unlock("Write")
 	s.lines = append(s.lines, line)
 
 	return nil
 }
 
 func (s *Stream) ResetPos() {
-	s.lock(5)
-	defer s.unlock(5)
+	s.lock("ResetPos")
+	defer s.unlock("ResetPos")
 
 	s.pos = 0
 }
 
 func (s *Stream) Close() {
-	s.lock(6)
-	defer s.unlock(6)
+	s.lock("Close")
+	defer s.unlock("Close")
 
 	if s.closed {
 		return
@@ -104,4 +97,20 @@ func (s *Stream) Close() {
 	close(s.close)
 
 	s.closed = true
+}
+
+func (s *Stream) lock(id string) {
+	s.debug("Stream locking %s", id)
+	s.m.Lock()
+}
+
+func (s *Stream) unlock(id string) {
+	s.debug("Stream unlocking %s", id)
+	s.m.Unlock()
+}
+
+func (s *Stream) debug(format string, args ...interface{}) {
+	if s.logger != nil {
+		s.logger.Debugf(format+"\n", args...)
+	}
 }
