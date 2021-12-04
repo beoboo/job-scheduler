@@ -1,5 +1,0 @@
-module github.com/beoboo/job-scheduler/library
-
-go 1.16
-
-require github.com/fatih/color v1.13.0
