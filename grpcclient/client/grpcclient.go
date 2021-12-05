@@ -102,35 +102,35 @@ func (c *GrcpClient) Start(executable string, args string) (string, error) {
 	}
 
 	log.Printf("Job \"%s\" status: %s", js.Id, js.Status)
-	return js.Status, nil
+	return js.Id, nil
 }
 
-func (c *GrcpClient) Stop(id string) (string, error) {
+func (c *GrcpClient) Stop(id string) (string, int32, error) {
 	request := protocol.JobId{
 		Id: id,
 	}
 
 	js, err := c.client.Stop(c.ctx, &request)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
 
 	log.Printf("Job \"%s\" status: %s", js.Id, js.Status)
-	return js.Status, nil
+	return js.Status.String(), js.ExitCode, nil
 }
 
-func (c *GrcpClient) Status(id string) (string, error) {
+func (c *GrcpClient) Status(id string) (string, int32, error) {
 	request := protocol.JobId{
 		Id: id,
 	}
 
 	js, err := c.client.Status(c.ctx, &request)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
 
 	log.Printf("Job \"%s\" status: %s", js.Id, js.Status)
-	return js.Status, nil
+	return js.Status.String(), js.ExitCode, nil
 }
 
 func (c *GrcpClient) Output(id string) (string, error) {
@@ -153,7 +153,7 @@ func (c *GrcpClient) Output(id string) (string, error) {
 		if err != nil {
 			log.Fatalf("Error retrieving output stream, %v\n", err)
 		}
-		log.Printf("[%s][%s] %s", o.Time, o.Channel, o.Text)
+		log.Printf("[%s][%s] %s", o.Time.AsTime().Format("15:04:05.000"), o.Type, o.Text)
 
 		count += 1
 	}

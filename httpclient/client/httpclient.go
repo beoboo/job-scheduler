@@ -149,6 +149,7 @@ func (c *HttpClient) post(endpoint string, data []byte) (string, error) {
 	fmt.Println("Status:", response.Status)
 	fmt.Println("Headers:", response.Header)
 
+	// TODO: stream output
 	// Read the response body
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {

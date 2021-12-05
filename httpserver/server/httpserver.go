@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// Listen to HTTP(S) connections, with the server certificate if MTLS is enabled
+// ServeHttp listens to HTTP(S) connections, with the server certificate if MTLS is enabled
 func ServeHttp(addr string, enableMTLS bool) error {
 	scheme := buildScheme(enableMTLS)
 

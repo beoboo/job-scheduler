@@ -89,12 +89,12 @@ func stop(clnt *client.GrcpClient, args []string) {
 	id := args[0]
 
 	fmt.Printf("Stopping job \"%s\"\n", id)
-	output, err := clnt.Stop(id)
+	st, ec, err := clnt.Stop(id)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(output)
+	fmt.Printf("%s (%d)", st, ec)
 }
 
 func status(clnt *client.GrcpClient, args []string) {
@@ -105,12 +105,12 @@ func status(clnt *client.GrcpClient, args []string) {
 	id := args[0]
 
 	fmt.Printf("Checking status for the job \"%s\"\n", id)
-	output, err := clnt.Status(id)
+	st, ec, err := clnt.Status(id)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(output)
+	fmt.Printf("%s (%d)", st, ec)
 }
 
 func output(clnt *client.GrcpClient, args []string) {
@@ -121,10 +121,10 @@ func output(clnt *client.GrcpClient, args []string) {
 	id := args[0]
 
 	fmt.Printf("Retrieving output for the job \"%s\"\n", id)
-	output, err := clnt.Output(id)
+	o, err := clnt.Output(id)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(output)
+	fmt.Println(o)
 }

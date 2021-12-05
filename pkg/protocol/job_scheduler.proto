@@ -1,0 +1,46 @@
+syntax = "proto3";
+option go_package = "github.com/beoboo/job-scheduler/pkg/protocol";
+import "google/protobuf/timestamp.proto";
+
+service JobScheduler {
+  rpc Start(Job) returns (JobStatus) {}
+  rpc Stop(JobId) returns (JobStatus) {}
+  rpc Status(JobId) returns (JobStatus) {}
+  rpc Output(JobId) returns (stream JobOutput) {}
+}
+
+message Job {
+  string executable = 1;
+  string args = 2;
+  float cpu = 3;    // 0 = unlimited, # shares per second
+  int32 memory = 4; // 0 = unlimited, in bytes
+  int32 io = 5;     // 0 = unlimited, 100-1000 otherwise
+}
+
+message JobId {
+  string id = 1;
+}
+
+message JobStatus {
+  string id = 1;
+  enum Status {
+    IDLE = 0;
+    RUNNING = 1;
+    FINISHED = 2;
+    KILLED = 3;
+    ERRORED = 4;
+  }
+  Status status = 2;
+
+  int32 exitCode = 3;
+}
+
+message JobOutput {
+  enum Type {
+    OUTPUT = 0;
+    ERROR = 1;
+  }
+  Type type = 1;
+  google.protobuf.Timestamp time = 2;
+  bytes text = 3;
+}
